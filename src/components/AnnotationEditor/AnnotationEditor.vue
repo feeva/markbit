@@ -24,7 +24,7 @@ interface Props {
 
 interface Emits {
   (e: 'close'): void
-  (e: 'save', data: AnnotationSavePayload): void
+  (e: 'copy', data: AnnotationSavePayload): void
   (e: 'download', data: AnnotationSavePayload): void
 }
 
@@ -540,7 +540,7 @@ const buildSavePayload = (): AnnotationSavePayload => {
 }
 
 const handleCopy = () => {
-  emit('save', buildSavePayload())
+  emit('copy', buildSavePayload())
 }
 
 const handleDownload = () => {

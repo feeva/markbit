@@ -38,6 +38,12 @@ const markbitFrameBody = () =>
 const markbitCloseButton = () =>
   markbitFrameBody().find('[data-testid="markbit-close"]', { timeout: 15000 })
 
+const markbitCopyButton = () =>
+  markbitFrameBody().find('[data-tip="Copy to Clipboard"]', { timeout: 15000 })
+
+const markbitDownloadButton = () =>
+  markbitFrameBody().find('[data-tip="Download PNG"]', { timeout: 15000 })
+
 describe('Markbit loader (embed-test.html)', () => {
   beforeEach(() => {
     cy.visit('/embed-test.html')
@@ -92,5 +98,46 @@ describe('Markbit loader (embed-test.html)', () => {
     openMarkbit()
     cy.get('#markbit-host', { timeout: 15000 }).should('exist')
     cy.get('@editorChunk.all').should('have.length', 1)
+  })
+
+  // embed-test.html's loader <script> tag sets data-on-copy/data-on-download
+  // to a dot-path into window.markbitDemo (see main.ts's resolveGlobalCallback)
+  // — this exercises that whole path against the real built bundle, not just
+  // the resolver function in isolation (see main.test.ts for that).
+  it('fires the data-on-copy/data-on-download callbacks instead of the built-in clipboard/download action', () => {
+    openMarkbit()
+    markbitFrameBody().find('[data-cy="canvas"] canvas', { timeout: 15000 }).should('exist')
+
+    markbitCopyButton().click()
+    cy.get('#markbit-callback-log').should('contain.text', 'onCopy fired')
+    // A custom onCopy doesn't auto-close the overlay — the host now owns the
+    // payload's lifecycle (see embed.ts's open()).
+    cy.get('#markbit-host').should('exist')
+
+    markbitDownloadButton().click()
+    cy.get('#markbit-callback-log').should('contain.text', 'onDownload fired')
+  })
+
+  // Regression test for a real bug found while building this: Vite's default
+  // rollupOptions don't preserve an "app" entry's named exports through
+  // minification (they got silently mangled down to Vite's own internal
+  // __vitePreload helper) — `preserveEntrySignatures: 'strict'` in
+  // vite.config.ts fixes it. Without that, `import { init } from 'loader.js'`
+  // would fail for real ESM/bundler consumers even though everything else
+  // (the script-tag path) worked fine.
+  it('exposes a real ESM-importable public API (init, MarkbitLoader, resolveGlobalCallback)', () => {
+    cy.window()
+      .then((win) => {
+        const loaderUrl = new URL('/loader.js', win.location.href).href
+        // Module registry caches by URL, so this doesn't re-run
+        // autoInitializeFromScriptTag() a second time — it just returns the
+        // already-evaluated module's exports.
+        return win.eval(`import(${JSON.stringify(loaderUrl)})`) as Promise<Record<string, unknown>>
+      })
+      .then((mod) => {
+        expect(mod.init, 'init').to.be.a('function')
+        expect(mod.MarkbitLoader, 'MarkbitLoader').to.be.a('function')
+        expect(mod.resolveGlobalCallback, 'resolveGlobalCallback').to.be.a('function')
+      })
   })
 })

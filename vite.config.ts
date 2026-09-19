@@ -28,6 +28,7 @@ export default defineConfig({
     // emit as an actual asset file.
     assetsInlineLimit: (filePath) => (filePath.includes('icons-sprite') ? false : undefined),
     rollupOptions: {
+      preserveEntrySignatures: 'strict',
       input: {
         main: resolve(import.meta.dirname, 'index.html'),
         loader: resolve(import.meta.dirname, 'src/loader/main.ts'),

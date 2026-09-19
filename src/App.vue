@@ -7,19 +7,19 @@ import AnnotationEditor from './components/AnnotationEditor/AnnotationEditor.vue
 import type { AnnotationSavePayload } from './types/annotations'
 
 const imageUrl = ref<string | null>(null)
-const lastSavePayload = ref<AnnotationSavePayload | null>(null)
+const lastCopyPayload = ref<AnnotationSavePayload | null>(null)
 
 function onFileChange(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
   imageUrl.value = URL.createObjectURL(file)
-  lastSavePayload.value = null
+  lastCopyPayload.value = null
 }
 
-function onSave(payload: AnnotationSavePayload) {
-  lastSavePayload.value = payload
+function onCopy(payload: AnnotationSavePayload) {
+  lastCopyPayload.value = payload
   // eslint-disable-next-line no-console
-  console.log('[markbit] save payload', payload)
+  console.log('[markbit] copy payload', payload)
 }
 
 function onDownload(payload: AnnotationSavePayload) {
@@ -53,15 +53,15 @@ function onClose() {
     <div v-else class="h-[80vh] grid">
       <AnnotationEditor
         :image-url="imageUrl"
-        @save="onSave"
+        @copy="onCopy"
         @download="onDownload"
         @close="onClose"
       />
     </div>
 
     <pre
-      v-if="lastSavePayload"
+      v-if="lastCopyPayload"
       class="mt-4 max-w-2xl overflow-auto rounded bg-base-300 p-3 text-xs"
-      >{{ JSON.stringify(lastSavePayload, null, 2) }}</pre>
+      >{{ JSON.stringify(lastCopyPayload, null, 2) }}</pre>
   </div>
 </template>

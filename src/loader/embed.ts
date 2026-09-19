@@ -16,6 +16,7 @@
  */
 import type { AnnotationSavePayload } from '@/types/annotations'
 import type { MarkbitMount } from './frame'
+import type { MarkbitConfig } from './main'
 
 let iframe: HTMLIFrameElement | null = null
 let originalOverflow = { html: '', body: '' }
@@ -32,13 +33,17 @@ async function captureHostPage(): Promise<string> {
   return canvas.toDataURL('image/png')
 }
 
-async function copyToClipboard(dataUrl: string): Promise<void> {
+// Exported (not just used internally as the no-onCopy/no-onDownload default)
+// so a host's custom onCopy/onDownload callback can compose with the built-in
+// behavior instead of reimplementing it, e.g. "copy normally, then also log
+// an analytics event".
+export async function copyToClipboard(dataUrl: string): Promise<void> {
   const response = await fetch(dataUrl)
   const blob = await response.blob()
   await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
 }
 
-function downloadDataUrl(dataUrl: string): void {
+export function downloadDataUrl(dataUrl: string): void {
   // A data: URL downloads directly via the anchor's `download` attribute —
   // no fetch/blob roundtrip needed (that's only required for
   // clipboard.write(), which needs a Blob, not a URL).
@@ -115,7 +120,7 @@ export function isOpen(): boolean {
   return iframe !== null
 }
 
-export async function open(): Promise<void> {
+export async function open(config: MarkbitConfig = {}): Promise<void> {
   if (iframe) return
 
   const imageUrl = await captureHostPage()
@@ -136,16 +141,43 @@ export async function open(): Promise<void> {
   const win = frame.contentWindow as (Window & { __markbitMount?: MarkbitMount }) | null
   win?.__markbitMount?.(
     imageUrl,
+    // onCopy/onDownload are result-owning: if the host supplied one, it fully
+    // replaces our built-in action (no forced clipboard write on top of
+    // theirs) and we don't auto-close — the host now owns the payload's
+    // lifecycle and can call the returned MarkbitAPI's close() itself.
     (payload: AnnotationSavePayload) => {
+      if (config.onCopy) {
+        try {
+          config.onCopy(payload)
+        } catch (error) {
+          console.error('[markbit] onCopy callback threw', error)
+        }
+        return
+      }
       void copyToClipboard(payload.previewDataUrl)
         .catch((error) => console.error('[markbit] clipboard copy failed', error))
         .finally(() => close())
     },
-    // Unlike copy, downloading doesn't close the overlay — a user may want to
-    // download and keep annotating (or copy afterwards too).
+    // Unlike copy, downloading doesn't close the overlay by default either —
+    // a user may want to download and keep annotating (or copy afterwards too).
     (payload: AnnotationSavePayload) => {
+      if (config.onDownload) {
+        try {
+          config.onDownload(payload)
+        } catch (error) {
+          console.error('[markbit] onDownload callback threw', error)
+        }
+        return
+      }
       downloadDataUrl(payload.previewDataUrl)
     },
-    () => close(),
+    // onClose is a lifecycle notification, not result-owning: Markbit always
+    // tears down the overlay itself, and config.onClose (if any) just runs
+    // afterward so the host can react (e.g. resume their own paused UI).
+    () => {
+      close()
+      config.onClose?.()
+    },
   )
+  config.onOpen?.()
 }

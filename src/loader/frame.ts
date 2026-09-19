@@ -18,7 +18,7 @@ import iconSprite from '@/assets/icons-sprite.svg?url'
 
 export type MarkbitMount = (
   imageUrl: string,
-  onSave: (payload: AnnotationSavePayload) => void,
+  onCopy: (payload: AnnotationSavePayload) => void,
   onDownload: (payload: AnnotationSavePayload) => void,
   onClose: () => void,
 ) => void
@@ -29,7 +29,7 @@ declare global {
   }
 }
 
-const mount: MarkbitMount = (imageUrl, onSave, onDownload, onClose) => {
+const mount: MarkbitMount = (imageUrl, onCopy, onDownload, onClose) => {
   // The <meta viewport> tag and the overflow:hidden reset are already baked
   // into embed.ts's srcdoc HTML for this iframe's document (see its comment
   // for why — a <meta> appended via JS after the fact isn't reliable on all
@@ -69,7 +69,7 @@ const mount: MarkbitMount = (imageUrl, onSave, onDownload, onClose) => {
   mountPoint.className = 'h-screen w-screen grid'
   document.body.appendChild(mountPoint)
 
-  createApp(AnnotationEditor, { imageUrl, onSave, onDownload, onClose }).mount(mountPoint)
+  createApp(AnnotationEditor, { imageUrl, onCopy, onDownload, onClose }).mount(mountPoint)
 
   // AnnotationEditor declares a `close` emit but never fires it itself
   // (starissue relied on wrapping it in a native <dialog> for Escape-to-close

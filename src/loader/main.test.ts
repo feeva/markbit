@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it } from 'vitest'
-import { getCurrentScriptElement, matchesHotkey } from './main'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { getCurrentScriptElement, matchesHotkey, resolveGlobalCallback } from './main'
 
 function keyEvent(overrides: Partial<KeyboardEvent>) {
   return {
@@ -113,5 +113,54 @@ describe('getCurrentScriptElement', () => {
 
   it('returns null when no script tag matches and currentScript is unavailable', () => {
     expect(getCurrentScriptElement()).toBeNull()
+  })
+})
+
+describe('resolveGlobalCallback', () => {
+  afterEach(() => {
+    // @ts-expect-error test-only cleanup of globals we attach below
+    delete window.markbitTestFn
+    // @ts-expect-error test-only cleanup of globals we attach below
+    delete window.markbitTestApp
+    // @ts-expect-error test-only cleanup of globals we attach below
+    delete window.markbitTestValue
+  })
+
+  it('returns undefined when no path is given', () => {
+    expect(resolveGlobalCallback(undefined)).toBeUndefined()
+  })
+
+  it('resolves a top-level global function', () => {
+    const fn = vi.fn()
+    // @ts-expect-error assigning a test-only global
+    window.markbitTestFn = fn
+
+    const resolved = resolveGlobalCallback('markbitTestFn')
+    resolved?.('payload')
+
+    expect(fn).toHaveBeenCalledWith('payload')
+  })
+
+  it('resolves a nested dot-path global function', () => {
+    const fn = vi.fn()
+    // @ts-expect-error assigning a test-only global
+    window.markbitTestApp = { nested: { handler: fn } }
+
+    const resolved = resolveGlobalCallback('markbitTestApp.nested.handler')
+    resolved?.('payload')
+
+    expect(fn).toHaveBeenCalledWith('payload')
+  })
+
+  it('returns undefined and logs an error when the path does not resolve to a function', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    // @ts-expect-error assigning a test-only global
+    window.markbitTestValue = 'not a function'
+
+    expect(resolveGlobalCallback('markbitTestValue')).toBeUndefined()
+    expect(resolveGlobalCallback('markbitTestApp.does.not.exist')).toBeUndefined()
+    expect(errorSpy).toHaveBeenCalledTimes(2)
+
+    errorSpy.mockRestore()
   })
 })
