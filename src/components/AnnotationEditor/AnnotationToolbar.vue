@@ -21,6 +21,8 @@ interface Emits {
   (e: 'zoomIn'): void
   (e: 'zoomOut'): void
   (e: 'setZoom', preset: 'fit' | 50 | 100 | 300): void
+  (e: 'copy'): void
+  (e: 'download'): void
 }
 
 const props = defineProps<Props>()
@@ -302,6 +304,23 @@ const handleShowToolSettings = (tool: Tool | null): boolean => {
         <Icon name="zoom-in" />
       </button>
     </div>
+
+    <div class="join ml-auto">
+      <button
+        class="btn btn-sm join-item tooltip tooltip-bottom"
+        :data-tip="L('Copy to Clipboard')"
+        @click="emit('copy')"
+      >
+        <Icon name="copy" />
+      </button>
+      <button
+        class="btn btn-sm join-item tooltip tooltip-bottom"
+        :data-tip="L('Download PNG')"
+        @click="emit('download')"
+      >
+        <Icon name="download" />
+      </button>
+    </div>
   </div>
 
   <!-- Mobile Toolbar -->
@@ -358,8 +377,24 @@ const handleShowToolSettings = (tool: Tool | null): boolean => {
       </div>
     </div>
 
-    <button class="btn btn-sm btn-circle" :disabled="!selectedCount" @click="emit('delete')">
-      <Icon name="trash" />
-    </button>
+    <div class="flex items-center gap-2">
+      <button class="btn btn-sm btn-circle" :disabled="!selectedCount" @click="emit('delete')">
+        <Icon name="trash" />
+      </button>
+      <button
+        class="btn btn-sm btn-circle"
+        :aria-label="L('Copy to Clipboard')"
+        @click="emit('copy')"
+      >
+        <Icon name="copy" />
+      </button>
+      <button
+        class="btn btn-sm btn-circle"
+        :aria-label="L('Download PNG')"
+        @click="emit('download')"
+      >
+        <Icon name="download" />
+      </button>
+    </div>
   </div>
 </template>

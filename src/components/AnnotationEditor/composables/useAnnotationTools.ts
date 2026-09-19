@@ -777,7 +777,18 @@ export function useAnnotationTools({
     transformer.value?.nodes([])
     layer.value?.batchDraw()
 
-    const sourceCanvas = stage.value.toCanvas({ pixelRatio: 1 })
+    // Capture at a pixel ratio that compensates for both the current zoom
+    // level and the display's device pixel ratio. Without this, at
+    // pixelRatio 1 the capture only has as many pixels as the *on-screen,
+    // possibly zoomed-out* view — e.g. at 50% zoom it has half the source
+    // image's pixel density — but the crop below is still drawn out to the
+    // image's native (zoom-independent) size, so drawImage() ends up
+    // upscaling a low-res capture and the result looks soft/blurry (the "like
+    // it was saved as a low-quality jpg" symptom, even though the output is
+    // a lossless PNG). captureRatio keeps the source at (at minimum) native
+    // resolution regardless of zoom, and matches Retina/HiDPI displays too.
+    const captureRatio = (1 / stage.value.scaleX()) * (window.devicePixelRatio || 1)
+    const sourceCanvas = stage.value.toCanvas({ pixelRatio: captureRatio })
     const exportCanvas = window.document.createElement('canvas')
     const context = exportCanvas.getContext('2d')
 
@@ -804,15 +815,17 @@ export function useAnnotationTools({
       }
     }
 
-    // Transform crop rect from layer coordinates to stage viewport coordinates
+    // Transform crop rect from layer coordinates to stage viewport coordinates,
+    // then into sourceCanvas's actual pixel grid (captureRatio pixels per
+    // stage viewport CSS pixel, not 1:1 — see captureRatio above).
     const stagePos = stage.value.position()
     const stageScale = stage.value.scaleX()
 
     const cropRectInStage = {
-      x: absoluteCropRect.x * stageScale + stagePos.x,
-      y: absoluteCropRect.y * stageScale + stagePos.y,
-      width: absoluteCropRect.width * stageScale,
-      height: absoluteCropRect.height * stageScale,
+      x: (absoluteCropRect.x * stageScale + stagePos.x) * captureRatio,
+      y: (absoluteCropRect.y * stageScale + stagePos.y) * captureRatio,
+      width: absoluteCropRect.width * stageScale * captureRatio,
+      height: absoluteCropRect.height * stageScale * captureRatio,
     }
 
     exportCanvas.width = Math.max(1, Math.round(absoluteCropRect.width))

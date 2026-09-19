@@ -1,10 +1,10 @@
 /**
- * Runs INSIDE the blank iframe that embed.ts creates and injects this script
- * into — a genuinely separate Document. @vue/runtime-dom binds to whatever
- * `document` is global at the moment it's evaluated (`const doc = document`,
- * once, at module load), so this MUST be its own <script src="frame.js"> that
- * the iframe loads and executes itself — mounting a Vue app created in the
- * parent's realm into this iframe's DOM would throw WrongDocumentError.
+ * Runs INSIDE the iframe that embed.ts creates via `srcdoc` — a genuinely
+ * separate Document. @vue/runtime-dom binds to whatever `document` is global
+ * at the moment it's evaluated (`const doc = document`, once, at module
+ * load), so this MUST be its own <script src="frame.js"> that the iframe
+ * loads and executes itself — mounting a Vue app created in the parent's
+ * realm into this iframe's DOM would throw WrongDocumentError.
  *
  * (This is also why this couldn't just be the same dynamically-imported chunk
  * used for a Shadow DOM host: a shadow root shares the parent page's Document,
@@ -14,10 +14,12 @@ import { createApp } from 'vue'
 import AnnotationEditor from '@/components/AnnotationEditor/AnnotationEditor.vue'
 import type { AnnotationSavePayload } from '@/types/annotations'
 import cssText from '@/assets/main.css?inline'
+import iconSprite from '@/assets/icons-sprite.svg?url'
 
 export type MarkbitMount = (
   imageUrl: string,
   onSave: (payload: AnnotationSavePayload) => void,
+  onDownload: (payload: AnnotationSavePayload) => void,
   onClose: () => void,
 ) => void
 
@@ -27,7 +29,11 @@ declare global {
   }
 }
 
-const mount: MarkbitMount = (imageUrl, onSave, onClose) => {
+const mount: MarkbitMount = (imageUrl, onSave, onDownload, onClose) => {
+  // The <meta viewport> tag and the overflow:hidden reset are already baked
+  // into embed.ts's srcdoc HTML for this iframe's document (see its comment
+  // for why — a <meta> appended via JS after the fact isn't reliable on all
+  // mobile browsers).
   const style = document.createElement('style')
   style.textContent = cssText
   document.head.appendChild(style)
@@ -37,7 +43,10 @@ const mount: MarkbitMount = (imageUrl, onSave, onClose) => {
   closeButton.setAttribute('aria-label', 'Close')
   closeButton.dataset.testid = 'markbit-close'
   closeButton.className = 'btn btn-circle btn-sm'
-  closeButton.textContent = '✕'
+  // Using the same <svg><use> icon sprite as every other button (Icon.vue)
+  // instead of a plain '✕' text glyph, which rendered inconsistently
+  // (doubled/bold) depending on the OS's fallback font for that character.
+  closeButton.innerHTML = `<svg class="app-icon"><use href="${iconSprite}#tabler-x" /></svg>`
   Object.assign(closeButton.style, {
     position: 'fixed',
     top: '0.5rem',
@@ -60,13 +69,14 @@ const mount: MarkbitMount = (imageUrl, onSave, onClose) => {
   mountPoint.className = 'h-screen w-screen grid'
   document.body.appendChild(mountPoint)
 
-  createApp(AnnotationEditor, { imageUrl, onSave, onClose }).mount(mountPoint)
+  createApp(AnnotationEditor, { imageUrl, onSave, onDownload, onClose }).mount(mountPoint)
 
-  // AnnotationEditor declares a `close` emit but never fires it itself (see
-  // embed.ts's comment) — only the explicit close button above closes the
-  // overlay. Deliberately no Escape shortcut: it's too easy to hit by accident
-  // (e.g. dismissing an unrelated dropdown) and would silently discard
-  // in-progress annotations with no confirmation.
+  // AnnotationEditor declares a `close` emit but never fires it itself
+  // (starissue relied on wrapping it in a native <dialog> for Escape-to-close
+  // instead) — only the explicit close button above closes the overlay.
+  // Deliberately no Escape shortcut here either: it's too easy to hit by
+  // accident (e.g. dismissing an unrelated dropdown) and would silently
+  // discard in-progress annotations with no confirmation.
 }
 
 window.__markbitMount = mount

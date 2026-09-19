@@ -95,7 +95,6 @@ export interface AnnotationDocument {
 }
 
 export interface AnnotationSavePayload {
-  imageId: number
   annotationData: string
   previewDataUrl: string
 }

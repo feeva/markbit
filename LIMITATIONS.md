@@ -1,10 +1,10 @@
 # Known Limitations
 
 These are not bugs in our own code — they're confirmed limitations of libraries
-we depend on (Konva, html2canvas-pro), which we've deliberately decided not to
-fix at this stage. The point of writing them down is so nobody has to
-re-investigate the root cause from scratch the next time the same symptom shows
-up.
+we depend on (Konva, html2canvas-pro) or of the embedding model itself, which
+we've deliberately decided not to fix at this stage. The point of writing them
+down is so nobody has to re-investigate the root cause from scratch the next
+time the same symptom shows up.
 
 ---
 
@@ -67,3 +67,33 @@ quickly.
 
 **Revisit when**: Konva ships a release that fixes it, or real users
 repeatedly flag this UX.
+
+---
+
+## The overlay's mobile layout depends on the host page having a viewport meta tag
+
+**Symptom**: on a mobile browser, the whole Markbit overlay (not just its own
+UI — the entire host page) renders zoomed out and tiny, as if nothing
+responsive is happening at all.
+
+**Cause**: our overlay iframe is sized `100vw`/`100vh` relative to the _host
+page's_ layout viewport, not the physical device width. If the host page has
+no `<meta name="viewport" content="width=device-width, initial-scale=1">` of
+its own, mobile browsers fall back to a ~980px desktop-style layout viewport
+and zoom the whole page out to fit the real screen — taking our iframe (and
+everything else on the page) down with it. This is not something our own code
+can fix: the iframe we inject has its own correct viewport meta tag (see
+frame.ts/embed.ts's `srcdoc`), but that only controls layout _inside_ the
+iframe, not the _size the host page assigns to the iframe element itself_.
+
+**Impact**: only affects host pages that don't already set a viewport meta
+tag. In practice this is extremely rare in 2026 — it's been standard practice
+since roughly 2015 — but if a customer's page happens to lack one, Markbit's
+overlay inherits that page's existing mobile-rendering problem (which would
+already be affecting the rest of their page too, independent of Markbit).
+
+**Workaround (2026-09-19)**: `public/embed-test.html` now sets its own
+viewport meta tag so it represents a realistic, well-formed host page.
+
+**Revisit when**: real users report this on a host page that otherwise renders
+fine on mobile (which would indicate our assumption above is wrong).

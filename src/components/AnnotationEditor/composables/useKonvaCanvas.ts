@@ -22,6 +22,7 @@ export function useKonvaCanvas(
   const selectionRectangle = ref<Konva.Rect | null>(null)
   const backgroundImage = ref<Konva.Image | null>(null)
   let handleShiftKeyChange: ((event: KeyboardEvent) => void) | null = null
+  let resizeObserver: ResizeObserver | null = null
 
   onMounted(() => {
     if (!canvasRef.value) return
@@ -33,6 +34,18 @@ export function useKonvaCanvas(
       height: canvasRef.value.clientHeight,
     })
     stage.value = stageInstance
+
+    // The stage's pixel size is otherwise only ever set here, at mount — it
+    // never tracks the container div's own size afterwards, so resizing the
+    // window (or the mobile/desktop toolbar switching height) left the canvas
+    // stuck at whatever size it happened to be created at.
+    resizeObserver = new ResizeObserver(() => {
+      if (!canvasRef.value) return
+      stageInstance.width(canvasRef.value.clientWidth)
+      stageInstance.height(canvasRef.value.clientHeight)
+      stageInstance.batchDraw()
+    })
+    resizeObserver.observe(canvasRef.value)
 
     const layerInstance = new Konva.Layer()
     layer.value = layerInstance
@@ -126,6 +139,7 @@ export function useKonvaCanvas(
   })
 
   onUnmounted(() => {
+    resizeObserver?.disconnect()
     if (handleShiftKeyChange) {
       window.removeEventListener('keydown', handleShiftKeyChange)
       window.removeEventListener('keyup', handleShiftKeyChange)

@@ -26,12 +26,12 @@ const ICON_NAMES = [
   'trash',
   'zoom-out',
   'zoom-in',
+  'copy',
+  'download',
+  'x',
 ]
 
-const SOURCE = resolve(
-  __dirname,
-  '../node_modules/@tabler/icons-sprite/dist/tabler-sprite.svg',
-)
+const SOURCE = resolve(__dirname, '../node_modules/@tabler/icons-sprite/dist/tabler-sprite.svg')
 const DEST = resolve(__dirname, '../src/assets/icons-sprite.svg')
 
 const source = readFileSync(SOURCE, 'utf-8')

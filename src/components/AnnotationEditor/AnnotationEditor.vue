@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import Konva from 'konva'
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import AnnotationToolbar from './AnnotationToolbar.vue'
 import { useAnnotationTools } from './composables/useAnnotationTools'
@@ -25,12 +25,23 @@ interface Props {
 interface Emits {
   (e: 'close'): void
   (e: 'save', data: AnnotationSavePayload): void
+  (e: 'download', data: AnnotationSavePayload): void
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  forMobile: false,
-})
+const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
+
+// `forMobile` is an optional override (e.g. for Cypress component tests that
+// want the mobile layout without actually resizing the viewport). When it's
+// not passed, the layout auto-detects from the component's own rendered
+// width via ResizeObserver — using the container's width rather than
+// `window.innerWidth` means this works correctly regardless of how large the
+// host page lets the overlay be, not just full-viewport embeds.
+const MOBILE_LAYOUT_BREAKPOINT_PX = 640
+const rootRef = ref<HTMLDivElement | null>(null)
+const isNarrowContainer = ref(false)
+const isMobileLayout = computed(() => props.forMobile ?? isNarrowContainer.value)
+let resizeObserver: ResizeObserver | null = null
 
 const handleDefaultTool = (annotationData?: AnnotationDocument | null): Tool => {
   if (!annotationData) {
@@ -503,11 +514,38 @@ watch(activeTool, (tool) => {
   handleUpdateHoverCursor(stage.value?.getPointerPosition() || undefined)
 })
 
+onMounted(() => {
+  if (!rootRef.value) return
+
+  resizeObserver = new ResizeObserver((entries) => {
+    const width = entries[0]?.contentRect.width ?? 0
+    isNarrowContainer.value = width > 0 && width < MOBILE_LAYOUT_BREAKPOINT_PX
+  })
+  resizeObserver.observe(rootRef.value)
+})
+
 onUnmounted(() => {
+  resizeObserver?.disconnect()
   destroyActiveTextarea()
   cancelTool()
   handleUnregisterEventHandlers()
 })
+
+const buildSavePayload = (): AnnotationSavePayload => {
+  const document = serializeStageToAnnotationDocument()
+  return {
+    annotationData: JSON.stringify(document),
+    previewDataUrl: generatePreviewDataUrl(document),
+  }
+}
+
+const handleCopy = () => {
+  emit('save', buildSavePayload())
+}
+
+const handleDownload = () => {
+  emit('download', buildSavePayload())
+}
 
 defineExpose({
   serializeStageToAnnotationDocument,
@@ -516,10 +554,25 @@ defineExpose({
 </script>
 
 <template>
-  <div class="flex flex-col">
+  <!--
+    min-w-0: a flex container's default min-width is `auto`, which resolves to
+    its content's unwrapped natural width (here, the toolbar's full button row)
+    — that silently overrides the grid parent's attempt to stretch/shrink this
+    to the container's actual width, so it never shrinks below whatever the
+    toolbar's widest-ever unwrapped state needed, and flex-wrap on the toolbar
+    row never gets a narrow-enough box to actually wrap into.
+  -->
+  <div ref="rootRef" class="flex flex-col min-w-0">
     <!-- as tooltips are placed under the canvas, we need to set a higher z-index for the toolbar -->
+    <!--
+      pr-14 (not px-4 on both sides): frame.ts's close button floats fixed at
+      top:0.5rem/right:0.5rem, on top of everything, outside this component's
+      control (it's injected directly into the host document, not part of
+      this Vue tree). Without this reserved gutter, toolbar content pushed to
+      the right edge (e.g. the copy/download buttons) renders underneath it.
+    -->
     <div
-      class="shrink-0 bg-base-200 border-b border-base-300 px-4 py-2 relative"
+      class="shrink-0 bg-base-200 border-b border-base-300 pl-4 pr-14 py-2 relative"
       style="z-index: 1"
     >
       <AnnotationToolbar
@@ -527,13 +580,15 @@ defineExpose({
         :tool-settings="toolSettings"
         :scale
         :selected-count="selectedNodes.length"
-        :for-mobile="props.forMobile"
+        :for-mobile="isMobileLayout"
         @select-tool="handleSelectTool"
         @update-tool-settings="handleUpdateToolSettings"
         @delete="handleDelete"
         @zoom-in="zoomIn"
         @zoom-out="zoomOut"
         @set-zoom="handleSetZoom"
+        @copy="handleCopy"
+        @download="handleDownload"
       />
     </div>
 
@@ -541,7 +596,7 @@ defineExpose({
       <div ref="canvasRef" class="h-full inset-0" data-cy="canvas"></div>
 
       <div
-        v-if="props.forMobile"
+        v-if="isMobileLayout"
         class="absolute bottom-4 left-1/2 -translate-x-1/2 w-auto whitespace-nowrap bg-black/50 text-white text-xs px-3 py-2 rounded-full"
       >
         {{ L('Pinch to zoom • Two fingers to pan') }}

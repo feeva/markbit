@@ -22,6 +22,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!--
+      Real host pages virtually always have this already (standard since
+      ~2015) — Markbit's script has no way to add it for a customer's page.
+      Without it here, this fixture itself falls back to a ~980px desktop
+      layout viewport on mobile and gets zoomed out to fit, taking our 100vw
+      iframe overlay down with it — not a bug in the overlay's own layout.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Markbit embed test</title>
     <style>
       body {

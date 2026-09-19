@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // Phase 0 harness — proves AnnotationEditor runs standalone, outside starissue.
-// Not the Phase 1 product UX (no paste/drop, no clipboard copy, no download yet).
+// Not the Phase 1 product UX (no paste/drop yet — see loader/embed.ts for the
+// real hotkey-capture entry point).
 import { ref } from 'vue'
 import AnnotationEditor from './components/AnnotationEditor/AnnotationEditor.vue'
 import type { AnnotationSavePayload } from './types/annotations'
@@ -21,6 +22,13 @@ function onSave(payload: AnnotationSavePayload) {
   console.log('[markbit] save payload', payload)
 }
 
+function onDownload(payload: AnnotationSavePayload) {
+  const link = document.createElement('a')
+  link.href = payload.previewDataUrl
+  link.download = `markbit-${Date.now()}.png`
+  link.click()
+}
+
 function onClose() {
   imageUrl.value = null
 }
@@ -32,7 +40,7 @@ function onClose() {
 
     <div v-if="!imageUrl" class="flex flex-col gap-2">
       <p class="text-sm opacity-70">
-        이미지를 선택해서 AnnotationEditor가 독립 실행되는지 확인하세요.
+        Choose an image to check that AnnotationEditor runs standalone.
       </p>
       <input type="file" accept="image/*" class="file-input" @change="onFileChange" />
     </div>
@@ -43,7 +51,12 @@ function onClose() {
       makes the single unsized child stretch to fill both axes by default.
     -->
     <div v-else class="h-[80vh] grid">
-      <AnnotationEditor :image-url="imageUrl" @save="onSave" @close="onClose" />
+      <AnnotationEditor
+        :image-url="imageUrl"
+        @save="onSave"
+        @download="onDownload"
+        @close="onClose"
+      />
     </div>
 
     <pre

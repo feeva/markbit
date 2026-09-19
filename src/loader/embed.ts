@@ -3,13 +3,16 @@
  * isolated overlay running frame.ts (Vue+Konva+AnnotationEditor). Only loaded
  * via dynamic import() when the hotkey fires — never on page load.
  *
- * Uses a blank iframe + an injected <script>, not Shadow DOM: an about:blank
- * iframe is same-origin with the page that created it (no postMessage needed —
- * see frame.ts's window.__markbitMount, called directly via contentWindow), but
- * it's a genuinely separate Document. That means Tailwind/DaisyUI's :root-scoped
- * CSS custom properties work completely normally — Shadow DOM shares the host
+ * Uses an iframe with `srcdoc`, not Shadow DOM: a srcdoc iframe is same-origin
+ * with the page that created it (no postMessage needed — see frame.ts's
+ * window.__markbitMount, called directly via contentWindow), but it's a
+ * genuinely separate Document. That means Tailwind/DaisyUI's :root-scoped CSS
+ * custom properties work completely normally — Shadow DOM shares the host
  * page's Document, so :root there only ever matches the *real* document root,
- * never the shadow root, which broke DaisyUI's theming entirely.
+ * never the shadow root, which broke DaisyUI's theming entirely. `srcdoc`
+ * (rather than `src: 'about:blank'` + an injected <script>) also lets this
+ * iframe have its own <meta viewport> from its very first parse — see
+ * createFrameIframe() below.
  */
 import type { AnnotationSavePayload } from '@/types/annotations'
 import type { MarkbitMount } from './frame'
@@ -35,20 +38,14 @@ async function copyToClipboard(dataUrl: string): Promise<void> {
   await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
 }
 
-function createBlankIframe(): HTMLIFrameElement {
-  const el = document.createElement('iframe')
-  el.id = 'markbit-host'
-  el.src = 'about:blank'
-  Object.assign(el.style, {
-    position: 'fixed',
-    inset: '0',
-    width: '100vw',
-    height: '100vh',
-    border: 'none',
-    zIndex: '2147483647',
-  })
-  document.body.appendChild(el)
-  return el
+function downloadDataUrl(dataUrl: string): void {
+  // A data: URL downloads directly via the anchor's `download` attribute —
+  // no fetch/blob roundtrip needed (that's only required for
+  // clipboard.write(), which needs a Blob, not a URL).
+  const link = document.createElement('a')
+  link.href = dataUrl
+  link.download = `markbit-${Date.now()}.png`
+  link.click()
 }
 
 // frame.js must be fetched from Markbit's own origin, not the host page's — a
@@ -64,19 +61,43 @@ function frameScriptUrl(): string {
   return new URL(/* @vite-ignore */ '/frame.js', import.meta.url).toString()
 }
 
-function injectFrameScript(frame: HTMLIFrameElement): Promise<void> {
+// `srcdoc` (not `src: 'about:blank'` + a script injected afterwards): the
+// iframe needs its own <meta viewport>, since it's a separate Document that
+// doesn't inherit the host page's — without it, mobile browsers fall back to
+// a ~980px default layout viewport and scale the whole overlay down to fit
+// the screen. A <meta> tag only reliably affects layout when it's present
+// during the browser's *initial* parse of the document; appending one via JS
+// after the document already exists (which is what an about:blank iframe +
+// injected <script> requires) is ignored by some browsers, especially mobile
+// Safari. `srcdoc` gives the iframe a real initial HTML document — same-origin
+// with the parent, exactly like about:blank was — so the viewport meta tag
+// (and the overflow:hidden reset) are in effect from the very first paint.
+function createFrameIframe(): Promise<HTMLIFrameElement> {
   return new Promise((resolvePromise, reject) => {
-    const doc = frame.contentDocument
-    if (!doc) {
-      reject(new Error('[markbit] iframe contentDocument unavailable'))
-      return
-    }
-    const script = doc.createElement('script')
-    script.type = 'module'
-    script.src = frameScriptUrl()
-    script.addEventListener('load', () => resolvePromise())
-    script.addEventListener('error', () => reject(new Error('[markbit] failed to load frame.js')))
-    doc.head.appendChild(script)
+    const el = document.createElement('iframe')
+    el.id = 'markbit-host'
+    Object.assign(el.style, {
+      position: 'fixed',
+      inset: '0',
+      width: '100vw',
+      height: '100vh',
+      border: 'none',
+      zIndex: '2147483647',
+    })
+    el.addEventListener('load', () => resolvePromise(el))
+    el.addEventListener('error', () => reject(new Error('[markbit] failed to load frame.js')))
+    el.srcdoc = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>html, body { margin: 0; overflow: hidden; }</style>
+  </head>
+  <body>
+    <script type="module" src="${frameScriptUrl()}"><\/script>
+  </body>
+</html>`
+    document.body.appendChild(el)
   })
 }
 
@@ -100,7 +121,7 @@ export async function open(): Promise<void> {
   const imageUrl = await captureHostPage()
   if (iframe) return // guard against a second trigger firing while capture was in flight
 
-  const frame = createBlankIframe()
+  const frame = await createFrameIframe()
   iframe = frame
 
   originalOverflow = {
@@ -110,7 +131,6 @@ export async function open(): Promise<void> {
   document.documentElement.style.overflow = 'hidden'
   document.body.style.overflow = 'hidden'
 
-  await injectFrameScript(frame)
   frame.contentWindow?.focus() // so an immediate Escape reaches frame.ts's own listener
 
   const win = frame.contentWindow as (Window & { __markbitMount?: MarkbitMount }) | null
@@ -120,6 +140,11 @@ export async function open(): Promise<void> {
       void copyToClipboard(payload.previewDataUrl)
         .catch((error) => console.error('[markbit] clipboard copy failed', error))
         .finally(() => close())
+    },
+    // Unlike copy, downloading doesn't close the overlay — a user may want to
+    // download and keep annotating (or copy afterwards too).
+    (payload: AnnotationSavePayload) => {
+      downloadDataUrl(payload.previewDataUrl)
     },
     () => close(),
   )
