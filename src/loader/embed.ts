@@ -24,7 +24,7 @@ async function captureHostPage(): Promise<string> {
   const x = Math.max(0, Math.round(viewport?.pageLeft ?? window.scrollX))
   const y = Math.max(0, Math.round(viewport?.pageTop ?? window.scrollY))
 
-  const { default: html2canvas } = await import('html2canvas')
+  const { default: html2canvas } = await import('html2canvas-pro')
   const canvas = await html2canvas(document.documentElement, { x, y, width, height, scale: 1 })
   return canvas.toDataURL('image/png')
 }

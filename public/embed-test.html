@@ -6,15 +6,130 @@
 
   This ships inside dist/ (it's under public/) since the e2e test runs against the
   real production build, not the dev server. It has no sensitive content.
+
+  Deliberately varied content: gradients, oklch()/color-mix() (the modern CSS
+  color functions original html2canvas can't render — the reason this project
+  uses html2canvas-pro instead), a raster <img> (inline base64, so the capture
+  works offline with no CORS/network dependency), and an inline <svg>, so a
+  hotkey capture exercises more than a plain text-node screenshot.
+
+  Deliberately NOT using box-shadow: html2canvas(-pro) has a long-standing,
+  unfixed upstream bug rendering box-shadow blur combined with border-radius
+  (renders as a hard-edged block instead of a soft shadow) — see LIMITATIONS.md.
+  Using border here instead so this fixture demonstrates working capture
+  behavior rather than a known library bug.
 -->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <title>Markbit embed test</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #f4f4f5;
+        color: #18181b;
+      }
+
+      .hero {
+        padding: 48px 32px;
+        background: linear-gradient(135deg, oklch(0.7 0.2 30), oklch(0.7 0.2 300));
+        color: white;
+      }
+
+      .hero h1 {
+        margin: 0 0 8px;
+      }
+
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        padding: 32px;
+      }
+
+      .card {
+        border-radius: 12px;
+        padding: 20px;
+        border: 2px solid rgba(0, 0, 0, 0.2);
+        color: white;
+      }
+
+      .card--red {
+        background: color-mix(in oklch, oklch(0.65 0.25 25), white 10%);
+      }
+
+      .card--green {
+        background: color-mix(in oklch, oklch(0.75 0.2 140), white 10%);
+      }
+
+      .card--blue {
+        background: color-mix(in oklch, oklch(0.6 0.2 250), white 10%);
+      }
+
+      .media-row {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        padding: 0 32px 32px;
+        flex-wrap: wrap;
+      }
+
+      .media-row img {
+        width: 96px;
+        height: 96px;
+        image-rendering: pixelated;
+        border-radius: 8px;
+        border: 4px solid white;
+        outline: 2px solid rgba(0, 0, 0, 0.15);
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 999px;
+        background: color-mix(in srgb, #6366f1 60%, white);
+        color: #1e1b4b;
+        font-size: 14px;
+        font-weight: 600;
+      }
+    </style>
   </head>
   <body>
-    <h1>Host page (simulates a third-party site)</h1>
-    <p>This text exists so html2canvas has something to capture.</p>
+    <section class="hero">
+      <h1>Host page (simulates a third-party site)</h1>
+      <p>Gradient background uses oklch() — this is what the original html2canvas can't render.</p>
+      <span class="badge">color-mix() badge</span>
+    </section>
+
+    <div class="cards">
+      <div class="card card--red">Card one — solid color-mix() fill</div>
+      <div class="card card--green">Card two — solid color-mix() fill</div>
+      <div class="card card--blue">Card three — solid color-mix() fill</div>
+    </div>
+
+    <div class="media-row">
+      <img
+        alt="16x16 checkerboard test image"
+        src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAN0lEQVR42mN47+LyHxl/nceNgpWOxqFg66ZvKJhhGBhAqgZ0C4eDAaRqQLdwOBhAqgZ0C4eBAQBNGIJfRXVVoAAAAABJRU5ErkJggg=="
+      />
+      <svg width="96" height="96" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="48" cy="48" r="44" fill="#facc15" stroke="#1e1b4b" stroke-width="4" />
+        <path
+          d="M28 52 L44 68 L70 32"
+          fill="none"
+          stroke="#1e1b4b"
+          stroke-width="6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+      <p>
+        Inline &lt;img&gt; (base64 PNG) and inline &lt;svg&gt; — different rendering paths in
+        html2canvas.
+      </p>
+    </div>
+
     <!--
       type="module" is required: loader.js is built as an ES module (needed so the
       dynamic import('./embed') for lazy-loading actually code-splits — Rollup's

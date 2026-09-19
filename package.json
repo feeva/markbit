@@ -19,12 +19,12 @@
     "test:e2e": "npm run build && start-server-and-test preview http://localhost:4173 cypress:run:e2e"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.2.0",
-    "daisyui": "^5.5.18",
-    "html2canvas": "^1.4.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "daisyui": "^5.7.42",
+    "html2canvas-pro": "^2.4.3",
     "konva": "10.2.0",
-    "tailwindcss": "^4.2.0",
-    "vue": "^3.5.28"
+    "tailwindcss": "^4.3.3",
+    "vue": "^3.5.43"
   },
   "devDependencies": {
     "@tabler/icons-sprite": "^3.36.1",
