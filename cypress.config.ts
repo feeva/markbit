@@ -1,10 +1,10 @@
-import { defineConfig } from "cypress";
+import { defineConfig } from 'cypress'
 
 export default defineConfig({
   component: {
     devServer: {
-      framework: "vue",
-      bundler: "vite",
+      framework: 'vue',
+      bundler: 'vite',
     },
   },
 
@@ -12,8 +12,10 @@ export default defineConfig({
   viewportWidth: 1200,
 
   e2e: {
-    setupNodeEvents(on, config) {
-      // implement node event listeners here
-    },
+    // Runs against the production build (`npm run build && npm run preview`), not
+    // the dev server — this is meant to replace manual loader-test.html-style
+    // testing of the real, bundled loader.js/embed.js/AnnotationEditor.js chunks.
+    baseUrl: 'http://localhost:4173',
+    specPattern: 'cypress/e2e/**/*.cy.ts',
   },
-});
+})

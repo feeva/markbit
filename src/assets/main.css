@@ -2,19 +2,17 @@
 @plugin 'daisyui';
 
 body {
-  font-family:
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    Roboto,
-    'Noto Sans KR',
-    sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
   line-height: 1.5;
 }
 
 .app-icon {
-  width: 1.25em;
-  height: 1.25em;
+  /* rem, not em: em was relative to each button's own font-size (DaisyUI's
+     btn-sm has a small font-size), which rendered icons at ~15px instead of
+     the intended ~20px. rem keeps icon size consistent regardless of which
+     button size wraps it. */
+  width: 1.25rem;
+  height: 1.25rem;
   stroke: currentColor;
   stroke-width: 2;
   stroke-linecap: round;

@@ -31,14 +31,24 @@ function onClose() {
     <h1 class="mb-4 text-xl font-semibold">Markbit — Phase 0 harness</h1>
 
     <div v-if="!imageUrl" class="flex flex-col gap-2">
-      <p class="text-sm opacity-70">이미지를 선택해서 AnnotationEditor가 독립 실행되는지 확인하세요.</p>
+      <p class="text-sm opacity-70">
+        이미지를 선택해서 AnnotationEditor가 독립 실행되는지 확인하세요.
+      </p>
       <input type="file" accept="image/*" class="file-input" @change="onFileChange" />
     </div>
 
-    <AnnotationEditor v-else :image-url="imageUrl" @save="onSave" @close="onClose" />
+    <!--
+      AnnotationEditor's root <div> (class="flex flex-col") has no explicit
+      height of its own — same reason as loader/frame.ts's mountPoint. `grid`
+      makes the single unsized child stretch to fill both axes by default.
+    -->
+    <div v-else class="h-[80vh] grid">
+      <AnnotationEditor :image-url="imageUrl" @save="onSave" @close="onClose" />
+    </div>
 
-    <pre v-if="lastSavePayload" class="mt-4 max-w-2xl overflow-auto rounded bg-base-300 p-3 text-xs">{{
-      JSON.stringify(lastSavePayload, null, 2)
-    }}</pre>
+    <pre
+      v-if="lastSavePayload"
+      class="mt-4 max-w-2xl overflow-auto rounded bg-base-300 p-3 text-xs"
+      >{{ JSON.stringify(lastSavePayload, null, 2) }}</pre>
   </div>
 </template>

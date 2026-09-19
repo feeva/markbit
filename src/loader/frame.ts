@@ -1,0 +1,72 @@
+/**
+ * Runs INSIDE the blank iframe that embed.ts creates and injects this script
+ * into — a genuinely separate Document. @vue/runtime-dom binds to whatever
+ * `document` is global at the moment it's evaluated (`const doc = document`,
+ * once, at module load), so this MUST be its own <script src="frame.js"> that
+ * the iframe loads and executes itself — mounting a Vue app created in the
+ * parent's realm into this iframe's DOM would throw WrongDocumentError.
+ *
+ * (This is also why this couldn't just be the same dynamically-imported chunk
+ * used for a Shadow DOM host: a shadow root shares the parent page's Document,
+ * an iframe does not.)
+ */
+import { createApp } from 'vue'
+import AnnotationEditor from '@/components/AnnotationEditor/AnnotationEditor.vue'
+import type { AnnotationSavePayload } from '@/types/annotations'
+import cssText from '@/assets/main.css?inline'
+
+export type MarkbitMount = (
+  imageUrl: string,
+  onSave: (payload: AnnotationSavePayload) => void,
+  onClose: () => void,
+) => void
+
+declare global {
+  interface Window {
+    __markbitMount?: MarkbitMount
+  }
+}
+
+const mount: MarkbitMount = (imageUrl, onSave, onClose) => {
+  const style = document.createElement('style')
+  style.textContent = cssText
+  document.head.appendChild(style)
+
+  const closeButton = document.createElement('button')
+  closeButton.type = 'button'
+  closeButton.setAttribute('aria-label', 'Close')
+  closeButton.dataset.testid = 'markbit-close'
+  closeButton.className = 'btn btn-circle btn-sm'
+  closeButton.textContent = '✕'
+  Object.assign(closeButton.style, {
+    position: 'fixed',
+    top: '0.5rem',
+    right: '0.5rem',
+    // AnnotationEditor's own toolbar wrapper uses z-index: 1 (see its "tooltips
+    // are placed under the canvas" comment) — anything lower or equal loses the
+    // DOM-order tiebreak to it, since the toolbar renders after this button.
+    zIndex: '2147483647',
+  })
+  closeButton.addEventListener('click', onClose)
+  document.body.appendChild(closeButton)
+
+  // AnnotationEditor's root <div> (class="flex flex-col") has no explicit
+  // height of its own — it expects an ancestor to establish one (starissue's
+  // does via a <dialog class="modal">). `grid` gives it one for free: an
+  // unsized grid item stretches to fill both axes by default (unlike flexbox,
+  // where only the cross-axis stretches), without needing to touch
+  // AnnotationEditor.vue itself.
+  const mountPoint = document.createElement('div')
+  mountPoint.className = 'h-screen w-screen grid'
+  document.body.appendChild(mountPoint)
+
+  createApp(AnnotationEditor, { imageUrl, onSave, onClose }).mount(mountPoint)
+
+  // AnnotationEditor declares a `close` emit but never fires it itself (see
+  // embed.ts's comment) — only the explicit close button above closes the
+  // overlay. Deliberately no Escape shortcut: it's too easy to hit by accident
+  // (e.g. dismissing an unrelated dropdown) and would silently discard
+  // in-progress annotations with no confirmation.
+}
+
+window.__markbitMount = mount

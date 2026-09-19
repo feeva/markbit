@@ -1,0 +1,31 @@
+<!doctype html>
+<!--
+  Fixture page for the loader Cypress e2e test (cypress/e2e/loader.cy.ts) and for
+  manually trying the embed the way starissue's loader-test.html was used — visit
+  this page after `npm run build && npm run preview` and press the hotkey.
+
+  This ships inside dist/ (it's under public/) since the e2e test runs against the
+  real production build, not the dev server. It has no sensitive content.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Markbit embed test</title>
+  </head>
+  <body>
+    <h1>Host page (simulates a third-party site)</h1>
+    <p>This text exists so html2canvas has something to capture.</p>
+    <!--
+      type="module" is required: loader.js is built as an ES module (needed so the
+      dynamic import('./embed') for lazy-loading actually code-splits — Rollup's
+      classic-script output formats, like IIFE, can't code-split at all). Real
+      customer embed snippets need this too, not just this test fixture.
+
+      Side note: document.currentScript is always null for type="module" scripts
+      by spec, so getCurrentScriptElement()'s fallback (matching script[src]
+      against import.meta.url) is the code path that actually runs here, not the
+      currentScript fast path.
+    -->
+    <script type="module" src="/loader.js" data-hotkey="ctrl+shift+m"></script>
+  </body>
+</html>
