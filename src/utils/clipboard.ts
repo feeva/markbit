@@ -19,12 +19,31 @@ export async function copyToClipboard(dataUrl: string): Promise<void> {
   ])
 }
 
+// Synchronous data: URL -> Blob conversion (no fetch/await): Safari has a
+// history of not reliably honoring the `download` attribute on a raw
+// `data:` href — it's been known to just navigate to/open the image instead
+// of saving a file — whereas a `blob:` object URL is respected consistently.
+// This must stay synchronous, not go through fetch().then(...): an `await`
+// here before link.click() would reintroduce the exact user-activation
+// problem worked around in copyToClipboard above (Safari requires
+// gesture-gated actions to run within the same synchronous task as the
+// click, not after a microtask/await boundary).
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [header, base64] = dataUrl.split(',')
+  const mime = /data:(.*?);base64/.exec(header)?.[1] ?? 'image/png'
+  const binary = atob(base64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i)
+  }
+  return new Blob([bytes], { type: mime })
+}
+
 export function downloadDataUrl(dataUrl: string): void {
-  // A data: URL downloads directly via the anchor's `download` attribute —
-  // no fetch/blob roundtrip needed (that's only required for
-  // clipboard.write(), which needs a Blob, not a URL).
+  const objectUrl = URL.createObjectURL(dataUrlToBlob(dataUrl))
   const link = document.createElement('a')
-  link.href = dataUrl
+  link.href = objectUrl
   link.download = `markbit-${Date.now()}.png`
   link.click()
+  URL.revokeObjectURL(objectUrl)
 }
