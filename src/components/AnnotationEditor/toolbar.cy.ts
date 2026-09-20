@@ -6,9 +6,29 @@ describe('<AnnotationEditor /> - Toolbar (Desktop)', () => {
     mountDesktop()
   })
 
-  it('defaults to crop for a new screenshot', () => {
-    cy.get('[data-tip="Crop"]').should('have.class', 'btn-active')
+  it('defaults to the Marker tool for a new screenshot with no stored preference', () => {
+    cy.get('[data-tip="Highlighter"]').should('have.class', 'btn-active')
+    cy.get('[data-tip="Crop"]').should('not.have.class', 'btn-active')
     cy.get('[data-tip="Select"]').should('not.have.class', 'btn-active')
+  })
+
+  it('remembers the last drawing tool used and defaults to it on the next open', () => {
+    cy.get('[data-tip=Box]').click()
+    cy.get('[data-tip=Box]').should('have.class', 'btn-active')
+
+    // Simulates the editor being closed and reopened for a fresh screenshot.
+    mountDesktop()
+
+    cy.get('[data-tip=Box]').should('have.class', 'btn-active')
+    cy.get('[data-tip="Highlighter"]').should('not.have.class', 'btn-active')
+  })
+
+  it('does not remember Crop or Select as the default tool', () => {
+    cy.get('[data-tip="Crop"]').click()
+    mountDesktop()
+
+    cy.get('[data-tip="Highlighter"]').should('have.class', 'btn-active')
+    cy.get('[data-tip="Crop"]').should('not.have.class', 'btn-active')
   })
 
   it('defaults to select for an existing annotation document', () => {

@@ -14,12 +14,10 @@ describe('<AnnotationEditor /> - Mobile Devices (Landscape)', () => {
     cy.get('[data-cy="canvas"]').should('exist').and('be.visible')
   })
 
-  it('shows standalone select and tools buttons in landscape with crop active by default', () => {
+  it('shows standalone select and tools buttons in landscape with Marker active by default', () => {
     cy.get('[data-tip="Select"]').should('be.visible').and('not.have.class', 'btn-active')
     cy.get('[data-tip="Tools"]').should('be.visible').and('have.class', 'btn-active')
-    cy.get('[data-tip="Tools"] use')
-      .should('have.attr', 'href')
-      .and('contain', '#tabler-border-corners')
+    cy.get('[data-tip="Tools"] use').should('have.attr', 'href').and('contain', '#tabler-highlight')
   })
 
   it('can select a non-select tool from landscape mobile tools menu', () => {

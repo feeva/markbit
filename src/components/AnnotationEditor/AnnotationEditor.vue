@@ -43,15 +43,52 @@ const isNarrowContainer = ref(false)
 const isMobileLayout = computed(() => props.forMobile ?? isNarrowContainer.value)
 let resizeObserver: ResizeObserver | null = null
 
+const isDrawingTool = (tool: Tool | null): tool is Exclude<Tool, 'select' | 'crop'> => {
+  return !!tool && tool !== 'select' && tool !== 'crop'
+}
+
+// Remembers only drawing tools (Box/Text/Marker/Pencil/Blur), not Crop/Select
+// — those two are situational (Crop responds to "is there something to
+// crop", Select to "is there something to select"), so persisting them would
+// just reintroduce the "opens on Crop no matter what I meant to do last"
+// annoyance this was built to fix.
+const LAST_DRAWING_TOOL_STORAGE_KEY = 'markbit:lastDrawingTool'
+const DEFAULT_NEW_TOOL: Tool = 'marker'
+
+// localStorage can throw (Safari private browsing, storage disabled by
+// policy) — a remembered-tool lookup must never break editor startup.
+const readStoredDrawingTool = (): Tool | null => {
+  try {
+    const stored = localStorage.getItem(LAST_DRAWING_TOOL_STORAGE_KEY) as Tool | null
+    return isDrawingTool(stored) ? stored : null
+  } catch {
+    return null
+  }
+}
+
+const writeStoredDrawingTool = (tool: Tool) => {
+  if (!isDrawingTool(tool)) return
+  try {
+    localStorage.setItem(LAST_DRAWING_TOOL_STORAGE_KEY, tool)
+  } catch {
+    // ignore — see readStoredDrawingTool
+  }
+}
+
 const handleDefaultTool = (annotationData?: AnnotationDocument | null): Tool => {
   if (!annotationData) {
-    return 'crop'
+    return readStoredDrawingTool() ?? DEFAULT_NEW_TOOL
   }
 
-  return annotationData.crop || annotationData.items.length > 0 ? 'select' : 'crop'
+  if (annotationData.crop || annotationData.items.length > 0) {
+    return 'select'
+  }
+
+  return readStoredDrawingTool() ?? DEFAULT_NEW_TOOL
 }
 
 const activeTool = ref<Tool>(handleDefaultTool(props.annotationData))
+watch(activeTool, (tool) => writeStoredDrawingTool(tool))
 
 const toolSettings = ref<Record<Tool, ToolSettings>>({
   select: { lineWidth: 0, lineColor: '#000000' },
@@ -98,10 +135,6 @@ const movingSelection = ref<{
   start: { x: number; y: number }
   nodes: Array<{ node: Konva.Node; x: number; y: number }>
 } | null>(null)
-
-const isDrawingTool = (tool: Tool | null): tool is Exclude<Tool, 'select' | 'crop'> => {
-  return !!tool && tool !== 'select' && tool !== 'crop'
-}
 
 const {
   isDrawing,

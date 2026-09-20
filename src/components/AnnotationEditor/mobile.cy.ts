@@ -20,12 +20,10 @@ describe('<AnnotationEditor /> - Mobile Devices', () => {
     cy.contains('Undo').should('not.exist')
   })
 
-  it('shows standalone select button and defaults to crop in the mobile tools menu', () => {
+  it('shows standalone select button and defaults to the Marker tool in the mobile tools menu', () => {
     cy.get('[data-tip="Select"]').should('be.visible').and('not.have.class', 'btn-active')
     cy.get('[data-tip="Tools"]').should('be.visible').and('have.class', 'btn-active')
-    cy.get('[data-tip="Tools"] use')
-      .should('have.attr', 'href')
-      .and('contain', '#tabler-border-corners')
+    cy.get('[data-tip="Tools"] use').should('have.attr', 'href').and('contain', '#tabler-highlight')
   })
 
   it('can select a non-select tool from mobile tools menu', () => {
