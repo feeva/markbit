@@ -601,6 +601,23 @@ defineExpose({
       >
         {{ L('Pinch to zoom • Two fingers to pan') }}
       </div>
+
+      <!--
+        Free-tier badge (see PLAN.md's "Dual-License Feature Split Candidates"
+        backlog — a future paid-tier removal toggle is deferred, not built
+        here). Bottom-right avoids frame.ts's close button, which floats
+        top-right. target="_blank" matters: without it, clicking inside the
+        embed widget navigates the srcdoc iframe's own browsing context,
+        silently blanking the overlay instead of opening a new tab.
+      -->
+      <a
+        href="https://markbit.abcbox.kr"
+        target="_blank"
+        rel="noopener"
+        class="absolute bottom-2 right-2 text-xs text-base-content/50 hover:text-base-content/80 no-underline select-none"
+      >
+        {{ L('Powered by Markbit') }}
+      </a>
     </div>
   </div>
 </template>

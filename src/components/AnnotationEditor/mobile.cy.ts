@@ -14,6 +14,12 @@ describe('<AnnotationEditor /> - Mobile Devices', () => {
     cy.contains('Two fingers to pan').should('be.visible')
   })
 
+  it('shows only real keyboard shortcuts in the Help dropdown', () => {
+    cy.get('[aria-label="Help"]').should('be.visible').click()
+    cy.contains('Delete / Backspace').should('be.visible')
+    cy.contains('Undo').should('not.exist')
+  })
+
   it('shows standalone select button and defaults to crop in the mobile tools menu', () => {
     cy.get('[data-tip="Select"]').should('be.visible').and('not.have.class', 'btn-active')
     cy.get('[data-tip="Tools"]').should('be.visible').and('have.class', 'btn-active')

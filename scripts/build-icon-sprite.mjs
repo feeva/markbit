@@ -29,6 +29,7 @@ const ICON_NAMES = [
   'copy',
   'download',
   'x',
+  'question-mark',
 ]
 
 const SOURCE = resolve(__dirname, '../node_modules/@tabler/icons-sprite/dist/tabler-sprite.svg')

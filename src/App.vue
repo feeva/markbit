@@ -1,67 +1,49 @@
 <script setup lang="ts">
-// Phase 0 harness — proves AnnotationEditor runs standalone, outside starissue.
-// Not the Phase 1 product UX (no paste/drop yet — see loader/embed.ts for the
-// real hotkey-capture entry point).
-import { ref } from 'vue'
 import AnnotationEditor from './components/AnnotationEditor/AnnotationEditor.vue'
+import LandingPage from './components/LandingPage.vue'
+import { useImageSource } from './composables/useImageSource'
+import { copyToClipboard, downloadDataUrl } from './utils/clipboard'
 import type { AnnotationSavePayload } from './types/annotations'
 
-const imageUrl = ref<string | null>(null)
-const lastCopyPayload = ref<AnnotationSavePayload | null>(null)
-
-function onFileChange(event: Event) {
-  const file = (event.target as HTMLInputElement).files?.[0]
-  if (!file) return
-  imageUrl.value = URL.createObjectURL(file)
-  lastCopyPayload.value = null
-}
+const {
+  imageUrl,
+  isDraggingOver,
+  error,
+  loadFromFile,
+  handleDrop,
+  handleDragOver,
+  handleDragLeave,
+  reset,
+} = useImageSource()
 
 function onCopy(payload: AnnotationSavePayload) {
-  lastCopyPayload.value = payload
-  // eslint-disable-next-line no-console
-  console.log('[markbit] copy payload', payload)
+  void copyToClipboard(payload.previewDataUrl).catch((err) =>
+    console.error('[markbit] clipboard copy failed', err),
+  )
 }
 
 function onDownload(payload: AnnotationSavePayload) {
-  const link = document.createElement('a')
-  link.href = payload.previewDataUrl
-  link.download = `markbit-${Date.now()}.png`
-  link.click()
-}
-
-function onClose() {
-  imageUrl.value = null
+  downloadDataUrl(payload.previewDataUrl)
 }
 </script>
 
 <template>
-  <div class="min-h-screen bg-base-200 p-6">
-    <h1 class="mb-4 text-xl font-semibold">Markbit — Phase 0 harness</h1>
+  <LandingPage
+    v-if="!imageUrl"
+    :is-dragging-over="isDraggingOver"
+    :error="error"
+    @file-picked="loadFromFile"
+    @drop="handleDrop"
+    @dragover="handleDragOver"
+    @dragleave="handleDragLeave"
+  />
 
-    <div v-if="!imageUrl" class="flex flex-col gap-2">
-      <p class="text-sm opacity-70">
-        Choose an image to check that AnnotationEditor runs standalone.
-      </p>
-      <input type="file" accept="image/*" class="file-input" @change="onFileChange" />
-    </div>
-
-    <!--
-      AnnotationEditor's root <div> (class="flex flex-col") has no explicit
-      height of its own — same reason as loader/frame.ts's mountPoint. `grid`
-      makes the single unsized child stretch to fill both axes by default.
-    -->
-    <div v-else class="h-[80vh] grid">
-      <AnnotationEditor
-        :image-url="imageUrl"
-        @copy="onCopy"
-        @download="onDownload"
-        @close="onClose"
-      />
-    </div>
-
-    <pre
-      v-if="lastCopyPayload"
-      class="mt-4 max-w-2xl overflow-auto rounded bg-base-300 p-3 text-xs"
-      >{{ JSON.stringify(lastCopyPayload, null, 2) }}</pre>
+  <!--
+    AnnotationEditor's root <div> (class="flex flex-col") has no explicit
+    height of its own — same reason as loader/frame.ts's mountPoint. `grid`
+    makes the single unsized child stretch to fill both axes by default.
+  -->
+  <div v-else class="h-screen w-screen grid">
+    <AnnotationEditor :image-url="imageUrl" @copy="onCopy" @download="onDownload" @close="reset" />
   </div>
 </template>

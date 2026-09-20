@@ -33,37 +33,29 @@ async function captureHostPage(): Promise<string> {
   return canvas.toDataURL('image/png')
 }
 
-// Exported (not just used internally as the no-onCopy/no-onDownload default)
-// so a host's custom onCopy/onDownload callback can compose with the built-in
-// behavior instead of reimplementing it, e.g. "copy normally, then also log
-// an analytics event".
-export async function copyToClipboard(dataUrl: string): Promise<void> {
-  const response = await fetch(dataUrl)
-  const blob = await response.blob()
-  await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
-}
+// Re-exported (not just used internally as the no-onCopy/no-onDownload
+// default) so a host's custom onCopy/onDownload callback can compose with the
+// built-in behavior instead of reimplementing it, e.g. "copy normally, then
+// also log an analytics event". Actual implementation lives in
+// @/utils/clipboard, shared with src/App.vue's standalone product page.
+export { copyToClipboard, downloadDataUrl } from '@/utils/clipboard'
+import { copyToClipboard, downloadDataUrl } from '@/utils/clipboard'
 
-export function downloadDataUrl(dataUrl: string): void {
-  // A data: URL downloads directly via the anchor's `download` attribute —
-  // no fetch/blob roundtrip needed (that's only required for
-  // clipboard.write(), which needs a Blob, not a URL).
-  const link = document.createElement('a')
-  link.href = dataUrl
-  link.download = `markbit-${Date.now()}.png`
-  link.click()
-}
-
-// frame.js must be fetched from Markbit's own origin, not the host page's — a
-// customer embedding <script src="https://markbit.example/loader.js"> on
+// frame.js must be fetched from Markbit's own CDN origin, not the host page's
+// — a customer embedding <script src="https://markbit.abcbox.kr/loader.js"> on
 // https://their-product.com must not resolve this to their-product.com/frame.js.
-// import.meta.url, inside this dynamically-imported chunk, is this chunk's own
-// served URL (e.g. https://markbit.example/assets/embed-XXXX.js), so its origin
-// is always Markbit's, regardless of what page loader.js was embedded on.
+// VITE_ASSET_BASE_URL is baked in at build time (see .env.production) and
+// always points at Markbit's own deployed domain; it's deliberately NOT
+// derived from import.meta.url (this chunk's own served URL), because that
+// would break the moment loader.js is ever consumed as a bundled dependency
+// (e.g. a future npm package) rather than loaded via a real <script src> —
+// import.meta.url there would resolve to the *consumer's* own bundle output,
+// not Markbit's domain. The window.location.origin fallback only matters for
+// local dev/preview/e2e builds, which intentionally don't set the env var
+// (see package.json's test:e2e using `--mode test`) and stay same-origin.
 function frameScriptUrl(): string {
-  // frame.js is a separate top-level build entry, not something Vite can
-  // statically verify from this chunk — it does exist at the site root at
-  // runtime (see vite.config.ts's entryFileNames).
-  return new URL(/* @vite-ignore */ '/frame.js', import.meta.url).toString()
+  const base = import.meta.env.VITE_ASSET_BASE_URL || window.location.origin
+  return new URL('/frame.js', base).toString()
 }
 
 // `srcdoc` (not `src: 'about:blank'` + a script injected afterwards): the

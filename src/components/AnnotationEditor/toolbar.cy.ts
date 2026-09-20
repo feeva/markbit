@@ -64,4 +64,13 @@ describe('<AnnotationEditor /> - Toolbar (Desktop)', () => {
   it('shows current zoom percentage', () => {
     cy.get('[data-tip="Zoom Level"]').invoke('text').should('match', /\d+%/)
   })
+
+  it('shows only real keyboard shortcuts in the Help dropdown', () => {
+    cy.get('[data-tip="Help"]').should('be.visible').click()
+    cy.contains('Delete / Backspace').should('be.visible')
+    cy.contains('Cmd/Ctrl + A').should('be.visible')
+    cy.contains('Lock aspect ratio').should('be.visible')
+    // No undo/redo, arrow-nudge, or zoom/tool hotkeys exist — don't claim they do.
+    cy.contains('Undo').should('not.exist')
+  })
 })

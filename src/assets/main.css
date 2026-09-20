@@ -1,5 +1,26 @@
 @import 'tailwindcss';
-@plugin 'daisyui';
+/* daisyUI ships CSS for every component regardless of usage (Tailwind's
+   automatic content scanning only prunes plain utility classes, not
+   daisyUI's own component layer) — this was the main contributor to
+   main.css being ~97KB, which matters doubly here since frame.ts inlines
+   this entire file as a JS string for the iframe's <style> tag. `exclude`
+   drops every component this project doesn't actually use; only
+   button/divider/dropdown/fileinput/join/label/menu/range/tooltip classes
+   appear anywhere in src/ (verified by grepping class="..."/:class="..."
+   across every .vue file). `radius` stays included (not excluded) despite
+   being an easy one to miss this way — rounded-box/-field/-selector are
+   utilities, not components, and AnnotationToolbar.vue's dropdown menus
+   already depend on rounded-box. Add a name back here if a future component
+   starts using one of the excluded ones — see
+   node_modules/daisyui/imports.js for the full name list. */
+@plugin 'daisyui' {
+  exclude:
+    skeleton, mask, status, checkbox, radio, collapse, fieldset, diff, hover3d, textrotate, kbd,
+    avatar, rating, stat, filter, megamenu, toggle, swap, link, hovergallery, select, badge, mockup,
+    calendar, modal, steps, list, breadcrumbs, chat, radialprogress, aura, stack, carousel, alert,
+    drawer, fab, input, toast, tab, navbar, countdown, textarea, card, indicator, progress, otp,
+    table, hero, validator, timeline, footer, loading, dock, glass, typography;
+}
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;

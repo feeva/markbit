@@ -8,6 +8,8 @@
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "build-only": "vite build",
+    "build-only:test": "vite build --mode test",
+    "build:test": "run-p type-check build-only:test",
     "type-check": "vue-tsc --build",
     "format": "prettier --write --experimental-cli src/",
     "cypress:open": "cypress open --component",
@@ -16,7 +18,7 @@
     "cypress:run:e2e": "cypress run --e2e --browser chrome",
     "icons:build": "node scripts/build-icon-sprite.mjs",
     "test:unit": "vitest run",
-    "test:e2e": "npm run build && start-server-and-test preview http://localhost:4173 cypress:run:e2e"
+    "test:e2e": "npm run build:test && start-server-and-test preview http://localhost:4173 cypress:run:e2e"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

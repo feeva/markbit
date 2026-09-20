@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 
 import Icon from '@/components/Icon.vue'
+import HelpDropdown from './HelpDropdown.vue'
 import ToolSettingsDropdown from './ToolSettingsDropdown.vue'
 import { L } from '@/i18n'
 import type { Tool, ToolSettings } from '@/types/annotations'
@@ -321,6 +322,8 @@ const handleShowToolSettings = (tool: Tool | null): boolean => {
         <Icon name="download" />
       </button>
     </div>
+
+    <HelpDropdown :for-mobile="false" />
   </div>
 
   <!-- Mobile Toolbar -->
@@ -395,6 +398,7 @@ const handleShowToolSettings = (tool: Tool | null): boolean => {
       >
         <Icon name="download" />
       </button>
+      <HelpDropdown :for-mobile="true" />
     </div>
   </div>
 </template>

@@ -1,0 +1,13 @@
+# Cloudflare Pages static-response headers.
+# <script type="module" src="cross-origin-url"> and dynamic import() both
+# require CORS (unlike classic scripts), and every real customer embed loads
+# these cross-origin from Markbit's own domain — see src/loader/embed.ts's
+# frameScriptUrl() and PLAN.md's 2026-09-20 Decision Log entry.
+/loader.js
+  Access-Control-Allow-Origin: *
+
+/frame.js
+  Access-Control-Allow-Origin: *
+
+/assets/*
+  Access-Control-Allow-Origin: *

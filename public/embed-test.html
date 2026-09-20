@@ -2,7 +2,11 @@
 <!--
   Fixture page for the loader Cypress e2e test (cypress/e2e/loader.cy.ts) and for
   manually trying the embed the way starissue's loader-test.html was used — visit
-  this page after `npm run build && npm run preview` and press the hotkey.
+  this page after `npm run build:test && npm run preview` and press the
+  hotkey. `build:test` matters: a plain `npm run build` picks up
+  .env.production and points frame.js at the real markbit.abcbox.kr CDN instead
+  of this local preview server (see src/loader/embed.ts's frameScriptUrl() and
+  package.json's build-only:test/build:test scripts).
 
   This ships inside dist/ (it's under public/) since the e2e test runs against the
   real production build, not the dev server. It has no sensitive content.
