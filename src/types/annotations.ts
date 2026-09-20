@@ -80,11 +80,7 @@ export interface BlurAnnotation {
 }
 
 export type AnnotationItem =
-  | RectangleAnnotation
-  | TextAnnotation
-  | MarkerAnnotation
-  | PencilAnnotation
-  | BlurAnnotation
+  RectangleAnnotation | TextAnnotation | MarkerAnnotation | PencilAnnotation | BlurAnnotation
 
 export interface AnnotationDocument {
   version: 1
@@ -97,6 +93,13 @@ export interface AnnotationDocument {
 export interface AnnotationSavePayload {
   annotationData: string
   previewDataUrl: string
+}
+
+export interface MarkbitAction {
+  id: string
+  label: string
+  icon: string // Icon.vue name — must exist in the local sprite (see icons:build)
+  onClick: (payload: AnnotationSavePayload) => void
 }
 
 export interface DraftAttachmentBase {

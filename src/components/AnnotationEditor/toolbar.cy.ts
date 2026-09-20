@@ -80,4 +80,20 @@ describe('<AnnotationEditor /> - Toolbar (Desktop)', () => {
       .should('have.attr', 'href', 'https://github.com/feeva/markbit/issues/new')
       .and('have.attr', 'target', '_blank')
   })
+
+  it('renders no result-action buttons when none are supplied (the default)', () => {
+    cy.get('[data-tip="Copy to Clipboard"]').should('not.exist')
+    cy.get('[data-tip="Download PNG"]').should('not.exist')
+  })
+
+  it('renders arbitrary supplied actions and fires their onClick with a save payload', () => {
+    const onClick = cy.stub().as('onClick')
+    mountDesktop({ actions: [{ id: 'test', label: 'Test Action', icon: 'copy', onClick }] })
+
+    cy.get('[data-tip="Test Action"]').should('be.visible').click()
+    cy.get('@onClick')
+      .should('have.been.calledOnce')
+      .its('firstCall.args.0')
+      .should('have.keys', ['annotationData', 'previewDataUrl'])
+  })
 })

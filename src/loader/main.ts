@@ -3,7 +3,7 @@
  *
  * Two ways to use this:
  *
- * 1. `<script src="loader.js" data-hotkey="ctrl+shift+m" data-on-copy="...">` on a
+ * 1. `<script src="loader.js" data-hotkey="ctrl+shift+m" data-config="...">` on a
  *    third-party page — this file's own module-eval-time code detects that tag
  *    and self-initializes from its `data-*` attributes (see
  *    autoInitializeFromScriptTag() below).
@@ -20,18 +20,17 @@
  * own DOM (see embed.ts/frame.ts) — that's a separate concern from this
  * file, which never touches the DOM beyond reading the <script> tag itself.
  */
-import type { AnnotationSavePayload } from '@/types/annotations'
+import type { AnnotationSavePayload, MarkbitAction } from '@/types/annotations'
 
-export type { AnnotationSavePayload }
+export type { AnnotationSavePayload, MarkbitAction }
 
 export interface MarkbitConfig {
   hotkey?: string
   onOpen?: () => void
   // Result-owning: if supplied, fully replaces Markbit's built-in
-  // clipboard-copy/file-download action instead of running alongside it —
-  // see embed.ts's open() for why.
-  onCopy?: (payload: AnnotationSavePayload) => void
-  onDownload?: (payload: AnnotationSavePayload) => void
+  // Copy/Download sample actions instead of running alongside them — see
+  // embed.ts's open() for why.
+  actions?: MarkbitAction[]
   // Lifecycle notification only: Markbit always tears down the overlay
   // itself regardless of this callback.
   onClose?: () => void
@@ -205,6 +204,42 @@ export const resolveGlobalCallback = (
   return value as (...args: any[]) => void
 }
 
+interface MarkbitActionConfigEntry {
+  id: string
+  label: string
+  icon: string
+  handler: string
+}
+
+// data-config carries an arbitrary list of result actions declaratively —
+// each entry's `handler` is a dot-path resolved the same way
+// data-on-open/data-on-close are (see resolveGlobalCallback above), since
+// data-* attributes still can't carry real function references. Malformed
+// JSON or an entry whose handler doesn't resolve is dropped with a console
+// error rather than throwing — a customer's typo shouldn't break the whole
+// embed, it should just fall back to Markbit's built-in Copy/Download
+// defaults (see frame.ts's defaultActions).
+const parseActionsConfig = (raw: string | undefined): MarkbitAction[] | undefined => {
+  if (!raw) return undefined
+
+  let entries: MarkbitActionConfigEntry[]
+  try {
+    entries = JSON.parse(raw)
+  } catch (error) {
+    console.error('[markbit] data-config is not valid JSON', error)
+    return undefined
+  }
+
+  const actions = entries
+    .map((entry) => {
+      const onClick = resolveGlobalCallback(entry.handler)
+      return onClick ? { id: entry.id, label: entry.label, icon: entry.icon, onClick } : null
+    })
+    .filter((action): action is MarkbitAction => action !== null)
+
+  return actions.length ? actions : undefined
+}
+
 const autoInitializeFromScriptTag = (): void => {
   const script = getCurrentScriptElement()
   if (!script || window.Markbit) {
@@ -214,8 +249,7 @@ const autoInitializeFromScriptTag = (): void => {
   window.Markbit = init({
     hotkey: script.dataset.hotkey,
     onOpen: resolveGlobalCallback(script.dataset.onOpen),
-    onCopy: resolveGlobalCallback(script.dataset.onCopy),
-    onDownload: resolveGlobalCallback(script.dataset.onDownload),
+    actions: parseActionsConfig(script.dataset.config),
     onClose: resolveGlobalCallback(script.dataset.onClose),
   })
   console.log('[markbit] loader initialized', window.Markbit)

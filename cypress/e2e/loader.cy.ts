@@ -44,6 +44,8 @@ const markbitCopyButton = () =>
 const markbitDownloadButton = () =>
   markbitFrameBody().find('[data-tip="Download PNG"]', { timeout: 15000 })
 
+const markbitShareButton = () => markbitFrameBody().find('[data-tip="Share"]', { timeout: 15000 })
+
 describe('Markbit loader (embed-test.html)', () => {
   beforeEach(() => {
     cy.visit('/embed-test.html')
@@ -100,22 +102,38 @@ describe('Markbit loader (embed-test.html)', () => {
     cy.get('@editorChunk.all').should('have.length', 1)
   })
 
-  // embed-test.html's loader <script> tag sets data-on-copy/data-on-download
-  // to a dot-path into window.markbitDemo (see main.ts's resolveGlobalCallback)
-  // — this exercises that whole path against the real built bundle, not just
-  // the resolver function in isolation (see main.test.ts for that).
-  it('fires the data-on-copy/data-on-download callbacks instead of the built-in clipboard/download action', () => {
+  // embed-test.html's loader <script> tag sets data-config to a JSON array of
+  // { id, label, icon, handler } entries pointing at window.markbitDemo (see
+  // main.ts's parseActionsConfig/resolveGlobalCallback) — this exercises that
+  // whole path against the real built bundle, not just the resolver function
+  // in isolation (see main.test.ts for that).
+  it('fires the data-config callbacks instead of the built-in Copy/Download actions', () => {
     openMarkbit()
     markbitFrameBody().find('[data-cy="canvas"] canvas', { timeout: 15000 }).should('exist')
 
     markbitCopyButton().click()
-    cy.get('#markbit-callback-log').should('contain.text', 'onCopy fired')
-    // A custom onCopy doesn't auto-close the overlay — the host now owns the
+    cy.get('#markbit-callback-log').should('contain.text', 'copy fired')
+    // A custom action doesn't auto-close the overlay — the host now owns the
     // payload's lifecycle (see embed.ts's open()).
     cy.get('#markbit-host').should('exist')
 
     markbitDownloadButton().click()
-    cy.get('#markbit-callback-log').should('contain.text', 'onDownload fired')
+    cy.get('#markbit-callback-log').should('contain.text', 'download fired')
+  })
+
+  // markbitDemo.onShare logs before checking navigator.share/canShare
+  // availability, so this assertion holds regardless of whether the CI
+  // browser actually supports the Web Share API (Linux Chrome commonly
+  // doesn't have an OS share target) — this only proves the data-config
+  // wiring reaches a third, non-default action, not that a real share sheet
+  // opens (that's a manual verification step, see the plan's Verification
+  // section).
+  it('fires a third custom action (Share) defined only via data-config', () => {
+    openMarkbit()
+    markbitFrameBody().find('[data-cy="canvas"] canvas', { timeout: 15000 }).should('exist')
+
+    markbitShareButton().click()
+    cy.get('#markbit-callback-log').should('contain.text', 'share fired')
   })
 
   // Regression test for a real bug found while building this: Vite's default

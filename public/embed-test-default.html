@@ -1,13 +1,13 @@
 <!doctype html>
 <!--
-  Same fixture as embed-test.html, minus the data-on-copy/data-on-download
-  overrides — this exercises the *default* clipboard-copy/file-download
-  action through the real embed iframe, which embed-test.html's callback
-  overrides deliberately bypass. Needed as a separate page rather than a
-  toggle on embed-test.html: loader.js reads script.dataset.onCopy once,
-  synchronously, at module init, so there's no way to flip it at runtime
-  from DevTools without reloading with the attribute already removed from
-  the HTML source.
+  Same fixture as embed-test.html, minus the data-config override — this
+  exercises frame.ts's built-in default Copy/Download sample actions through
+  the real embed iframe, which embed-test.html's data-config deliberately
+  replaces (and extends with a third, Share, action). Needed as a separate
+  page rather than a toggle on embed-test.html: loader.js reads
+  script.dataset.config once, synchronously, at module init, so there's no
+  way to flip it at runtime from DevTools without reloading with the
+  attribute already removed from the HTML source.
 
   Kept around permanently (not a throwaway test) since it's the only fixture
   that actually exercises the code path a real Safari user activation bug

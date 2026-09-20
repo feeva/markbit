@@ -5,7 +5,7 @@ import Icon from '@/components/Icon.vue'
 import HelpDropdown from './HelpDropdown.vue'
 import ToolSettingsDropdown from './ToolSettingsDropdown.vue'
 import { L } from '@/i18n'
-import type { Tool, ToolSettings } from '@/types/annotations'
+import type { MarkbitAction, Tool, ToolSettings } from '@/types/annotations'
 
 interface Props {
   activeTool: Tool | null
@@ -13,6 +13,7 @@ interface Props {
   scale: number
   selectedCount: number
   forMobile: boolean
+  actions: MarkbitAction[]
 }
 
 interface Emits {
@@ -22,8 +23,7 @@ interface Emits {
   (e: 'zoomIn'): void
   (e: 'zoomOut'): void
   (e: 'setZoom', preset: 'fit' | 50 | 100 | 300): void
-  (e: 'copy'): void
-  (e: 'download'): void
+  (e: 'action', id: string): void
 }
 
 const props = defineProps<Props>()
@@ -306,20 +306,15 @@ const handleShowToolSettings = (tool: Tool | null): boolean => {
       </button>
     </div>
 
-    <div class="join ml-auto">
+    <div v-if="actions.length" class="join ml-auto">
       <button
+        v-for="action in actions"
+        :key="action.id"
         class="btn btn-sm join-item tooltip tooltip-bottom"
-        :data-tip="L('Copy to Clipboard')"
-        @click="emit('copy')"
+        :data-tip="L(action.label)"
+        @click="emit('action', action.id)"
       >
-        <Icon name="copy" />
-      </button>
-      <button
-        class="btn btn-sm join-item tooltip tooltip-bottom"
-        :data-tip="L('Download PNG')"
-        @click="emit('download')"
-      >
-        <Icon name="download" />
+        <Icon :name="action.icon" />
       </button>
     </div>
 
@@ -385,18 +380,13 @@ const handleShowToolSettings = (tool: Tool | null): boolean => {
         <Icon name="trash" />
       </button>
       <button
+        v-for="action in actions"
+        :key="action.id"
         class="btn btn-sm btn-circle"
-        :aria-label="L('Copy to Clipboard')"
-        @click="emit('copy')"
+        :aria-label="L(action.label)"
+        @click="emit('action', action.id)"
       >
-        <Icon name="copy" />
-      </button>
-      <button
-        class="btn btn-sm btn-circle"
-        :aria-label="L('Download PNG')"
-        @click="emit('download')"
-      >
-        <Icon name="download" />
+        <Icon :name="action.icon" />
       </button>
       <HelpDropdown :for-mobile="true" />
     </div>

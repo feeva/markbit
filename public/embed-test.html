@@ -143,19 +143,22 @@
     </div>
 
     <!--
-      Demonstrates the data-on-copy/data-on-download callback API
-      (main.ts's resolveGlobalCallback): the attribute holds a dot-path to a
-      function already attached to `window`, resolved once when loader.js
-      initializes. When set, these fully replace Markbit's built-in
-      clipboard-copy/file-download behavior (see embed.ts's open()) — this
-      page just logs the payload instead of writing to the clipboard/disk.
+      Demonstrates the data-config callback API (main.ts's
+      parseActionsConfig/resolveGlobalCallback): data-config holds a JSON
+      array of { id, label, icon, handler } entries, where `handler` is a
+      dot-path to a function already attached to `window`, resolved once when
+      loader.js initializes. When set, this fully replaces Markbit's built-in
+      Copy/Download sample actions (see embed.ts's open()) — this page logs
+      Copy/Download instead of writing to the clipboard/disk, and adds a
+      third custom action (Share) that the built-in defaults don't have.
     -->
     <section style="padding: 0 32px 32px">
-      <h2>Custom copy/download callback log</h2>
+      <h2>Custom actions log (data-config)</h2>
       <p>
-        With <code>data-on-copy</code>/<code>data-on-download</code> set on the loader script tag
-        below, Copy/Download in the editor call this page's own handlers instead of the built-in
-        clipboard/file behavior.
+        With <code>data-config</code> set on the loader script tag below, the editor's result
+        actions are entirely defined by this page: Copy/Download log to this box instead of using
+        the built-in clipboard/file behavior, and a Share action (native OS share sheet) is added
+        that the zero-config default doesn't have.
       </p>
       <pre
         id="markbit-callback-log"
@@ -168,18 +171,34 @@
           overflow: auto;
         "
       >
-(waiting for a copy or download...)</pre>
+(waiting for an action...)</pre>
     </section>
 
     <script>
       window.markbitDemo = {
         onCopy(payload) {
           document.getElementById('markbit-callback-log').textContent =
-            `onCopy fired at ${new Date().toLocaleTimeString()} — ${payload.annotationData.length} bytes of annotation data`
+            `copy fired at ${new Date().toLocaleTimeString()} — ${payload.annotationData.length} bytes of annotation data`
         },
         onDownload(payload) {
           document.getElementById('markbit-callback-log').textContent =
-            `onDownload fired at ${new Date().toLocaleTimeString()} — ${payload.annotationData.length} bytes of annotation data`
+            `download fired at ${new Date().toLocaleTimeString()} — ${payload.annotationData.length} bytes of annotation data`
+        },
+        // Same navigator.share() pattern as src/utils/share.ts, duplicated
+        // here in plain JS since this fixture has no bundler/imports
+        // available (same reasoning as this file's other inline handlers).
+        onShare(payload) {
+          document.getElementById('markbit-callback-log').textContent =
+            `share fired at ${new Date().toLocaleTimeString()} — ${payload.annotationData.length} bytes of annotation data`
+          if (!navigator.share || !navigator.canShare) return
+          const [header, base64] = payload.previewDataUrl.split(',')
+          const mime = /data:(.*?);base64/.exec(header)?.[1] ?? 'image/png'
+          const binary = atob(base64)
+          const bytes = new Uint8Array(binary.length)
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+          const file = new File([bytes], `markbit-${Date.now()}.png`, { type: mime })
+          if (!navigator.canShare({ files: [file] })) return
+          navigator.share({ files: [file], title: 'Markbit' }).catch(() => {})
         },
       }
     </script>
@@ -199,8 +218,11 @@
       type="module"
       src="/loader.js"
       data-hotkey="ctrl+shift+m"
-      data-on-copy="markbitDemo.onCopy"
-      data-on-download="markbitDemo.onDownload"
+      data-config='[
+        {"id":"copy","label":"Copy to Clipboard","icon":"copy","handler":"markbitDemo.onCopy"},
+        {"id":"download","label":"Download PNG","icon":"download","handler":"markbitDemo.onDownload"},
+        {"id":"share","label":"Share","icon":"share","handler":"markbitDemo.onShare"}
+      ]'
     ></script>
   </body>
 </html>

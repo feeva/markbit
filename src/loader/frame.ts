@@ -13,18 +13,16 @@
 import { createApp } from 'vue'
 import AnnotationEditor from '@/components/AnnotationEditor/AnnotationEditor.vue'
 import { copyToClipboard, downloadDataUrl } from '@/utils/clipboard'
-import type { AnnotationSavePayload } from '@/types/annotations'
+import type { MarkbitAction } from '@/types/annotations'
 import cssText from '@/assets/main.css?inline'
 import iconSprite from '@/assets/icons-sprite.svg?url'
 
 export interface MarkbitMountCallbacks {
-  // Host overrides only — undefined means "no override, run the built-in
-  // clipboard-copy/file-download action". That default action MUST be
-  // triggered from inside this file (i.e. inside the iframe), not handed
-  // down as a parent-defined closure — see the comment on handleCopy below
-  // for why.
-  onCopy?: (payload: AnnotationSavePayload) => void
-  onDownload?: (payload: AnnotationSavePayload) => void
+  // Host-supplied actions only — undefined means "no override, run the
+  // built-in Copy/Download sample actions". Those MUST be triggered from
+  // inside this file (i.e. inside the iframe), not handed down as a
+  // parent-defined closure — see the comment on defaultActions below for why.
+  actions?: MarkbitAction[]
   // Bare parent-side teardown (iframe removal, overflow restore), no
   // config.onClose notification — used after the built-in copy action
   // auto-closes the overlay, matching the pre-existing behavior where that
@@ -43,7 +41,7 @@ declare global {
   }
 }
 
-const mount: MarkbitMount = (imageUrl, { onCopy, onDownload, closeOverlay, onClose }) => {
+const mount: MarkbitMount = (imageUrl, { actions, closeOverlay, onClose }) => {
   // The <meta viewport> tag and the overflow:hidden reset are already baked
   // into embed.ts's srcdoc HTML for this iframe's document (see its comment
   // for why — a <meta> appended via JS after the fact isn't reliable on all
@@ -96,28 +94,32 @@ const mount: MarkbitMount = (imageUrl, { onCopy, onDownload, closeOverlay, onClo
   // is not. (Discovered via a real bug report: Copy/Download did nothing in
   // Safari on the embed path but worked fine on the standalone product page,
   // which has no iframe at all.)
-  const handleCopy = (payload: AnnotationSavePayload) => {
-    if (onCopy) {
-      onCopy(payload)
-      return
-    }
-    void copyToClipboard(payload.previewDataUrl)
-      .catch((error) => console.error('[markbit] clipboard copy failed', error))
-      .finally(() => closeOverlay())
-  }
-
-  const handleDownload = (payload: AnnotationSavePayload) => {
-    if (onDownload) {
-      onDownload(payload)
-      return
-    }
-    downloadDataUrl(payload.previewDataUrl)
-  }
+  // Copy/Download here are sample actions the loader ships as a zero-config
+  // default, not special-cased behavior — the only thing still specific to
+  // "copy" is that it auto-closes the overlay on success, matching the
+  // pre-existing default UX.
+  const defaultActions: MarkbitAction[] = [
+    {
+      id: 'copy',
+      label: 'Copy to Clipboard',
+      icon: 'copy',
+      onClick: (payload) => {
+        void copyToClipboard(payload.previewDataUrl)
+          .catch((error) => console.error('[markbit] clipboard copy failed', error))
+          .finally(() => closeOverlay())
+      },
+    },
+    {
+      id: 'download',
+      label: 'Download PNG',
+      icon: 'download',
+      onClick: (payload) => downloadDataUrl(payload.previewDataUrl),
+    },
+  ]
 
   createApp(AnnotationEditor, {
     imageUrl,
-    onCopy: handleCopy,
-    onDownload: handleDownload,
+    actions: actions ?? defaultActions,
     onClose,
   }).mount(mountPoint)
 

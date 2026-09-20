@@ -8,7 +8,7 @@
 // Env.DB comes from wrangler.jsonc's d1_databases binding; types are in the
 // generated worker-configuration.d.ts (see `npm run cf:types`).
 
-const ALLOWED_EVENTS = new Set(['pageview', 'image_loaded', 'copy', 'download'])
+const ALLOWED_EVENTS = new Set(['pageview', 'image_loaded', 'copy', 'download', 'share'])
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   let body: unknown

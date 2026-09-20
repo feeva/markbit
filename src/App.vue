@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import AnnotationEditor from './components/AnnotationEditor/AnnotationEditor.vue'
 import LandingPage from './components/LandingPage.vue'
 import { useImageSource } from './composables/useImageSource'
 import { copyToClipboard, downloadDataUrl } from './utils/clipboard'
+import { canShareFile, shareDataUrl } from './utils/share'
 import { track } from './utils/track'
-import type { AnnotationSavePayload } from './types/annotations'
+import type { MarkbitAction } from './types/annotations'
 
 const {
   imageUrl,
@@ -23,17 +24,53 @@ watch(imageUrl, (url, previous) => {
   if (url && !previous) track('image_loaded')
 })
 
-function onCopy(payload: AnnotationSavePayload) {
-  track('copy')
-  void copyToClipboard(payload.previewDataUrl).catch((err) =>
-    console.error('[markbit] clipboard copy failed', err),
-  )
-}
+// Copy/Download/Share are this page's own sample actions, not something
+// AnnotationEditor hardcodes — see src/types/annotations.ts's MarkbitAction.
+// Share is a demo of the new extensibility (native OS share sheet via
+// navigator.share()); it's unrelated to PLAN.md's Phase 3 hosted Share URL
+// feature, see the 2026-09-20 Decision Log entry.
+const actions = computed<MarkbitAction[]>(() => {
+  const list: MarkbitAction[] = [
+    {
+      id: 'copy',
+      label: 'Copy to Clipboard',
+      icon: 'copy',
+      onClick: (payload) => {
+        track('copy')
+        void copyToClipboard(payload.previewDataUrl).catch((err) =>
+          console.error('[markbit] clipboard copy failed', err),
+        )
+      },
+    },
+    {
+      id: 'download',
+      label: 'Download PNG',
+      icon: 'download',
+      onClick: (payload) => {
+        track('download')
+        downloadDataUrl(payload.previewDataUrl)
+      },
+    },
+  ]
 
-function onDownload(payload: AnnotationSavePayload) {
-  track('download')
-  downloadDataUrl(payload.previewDataUrl)
-}
+  // Only rendered when the browser actually supports file sharing (e.g. no
+  // desktop Firefox) — a button that silently fails is worse than no button.
+  if (canShareFile()) {
+    list.push({
+      id: 'share',
+      label: 'Share',
+      icon: 'share',
+      onClick: (payload) => {
+        track('share')
+        void shareDataUrl(payload.previewDataUrl).catch((err) =>
+          console.error('[markbit] share failed', err),
+        )
+      },
+    })
+  }
+
+  return list
+})
 </script>
 
 <template>
@@ -53,6 +90,6 @@ function onDownload(payload: AnnotationSavePayload) {
     makes the single unsized child stretch to fill both axes by default.
   -->
   <div v-else class="h-screen w-screen grid">
-    <AnnotationEditor :image-url="imageUrl" @copy="onCopy" @download="onDownload" @close="reset" />
+    <AnnotationEditor :image-url="imageUrl" :actions="actions" @close="reset" />
   </div>
 </template>

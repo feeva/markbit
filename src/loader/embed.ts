@@ -14,7 +14,6 @@
  * iframe have its own <meta viewport> from its very first parse — see
  * createFrameIframe() below.
  */
-import type { AnnotationSavePayload } from '@/types/annotations'
 import type { MarkbitMount } from './frame'
 import type { MarkbitConfig } from './main'
 
@@ -33,12 +32,12 @@ async function captureHostPage(): Promise<string> {
   return canvas.toDataURL('image/png')
 }
 
-// Re-exported so a host's custom onCopy/onDownload callback can compose with
-// the built-in behavior instead of reimplementing it, e.g. "copy normally,
-// then also log an analytics event". Note this composition itself runs in
-// the host's page context (see open() below), so the same cross-frame
-// user-activation caveat documented in frame.ts's handleCopy applies if the
-// host's own callback calls these from here.
+// Re-exported so a host's custom action onClick can compose with the
+// built-in behavior instead of reimplementing it, e.g. "copy normally, then
+// also log an analytics event". Note this composition itself runs in the
+// host's page context (see open() below), so the same cross-frame
+// user-activation caveat documented in frame.ts's defaultActions applies if
+// the host's own callback calls these from here.
 export { copyToClipboard, downloadDataUrl } from '@/utils/clipboard'
 
 // frame.js must be fetched from Markbit's own CDN origin, not the host page's
@@ -137,33 +136,25 @@ export async function open(config: MarkbitConfig = {}): Promise<void> {
 
   frame.contentWindow?.focus() // so an immediate Escape reaches frame.ts's own listener
 
-  // onCopy/onDownload are only passed through when the host actually
-  // supplied one — undefined tells frame.ts to run the built-in default
-  // action itself, inside the iframe (see frame.ts's handleCopy for why that
-  // must happen there and not here). onCopy/onDownload are result-owning: a
-  // host override fully replaces our built-in action (no forced clipboard
-  // write on top of theirs) and we don't auto-close — the host now owns the
-  // payload's lifecycle and can call the returned MarkbitAPI's close() itself.
+  // actions is only passed through when the host actually supplied some —
+  // undefined tells frame.ts to run its own built-in default actions, inside
+  // the iframe (see frame.ts's defaultActions for why that must happen there
+  // and not here). Host-supplied actions are result-owning: they fully
+  // replace our built-in defaults (no forced clipboard write on top of
+  // theirs) and we don't auto-close — the host now owns the payload's
+  // lifecycle and can call the returned MarkbitAPI's close() itself.
   const win = frame.contentWindow as (Window & { __markbitMount?: MarkbitMount }) | null
   win?.__markbitMount?.(imageUrl, {
-    onCopy: config.onCopy
-      ? (payload: AnnotationSavePayload) => {
-          try {
-            config.onCopy?.(payload)
-          } catch (error) {
-            console.error('[markbit] onCopy callback threw', error)
-          }
+    actions: config.actions?.map((action) => ({
+      ...action,
+      onClick: (payload) => {
+        try {
+          action.onClick(payload)
+        } catch (error) {
+          console.error(`[markbit] action "${action.id}" onClick threw`, error)
         }
-      : undefined,
-    onDownload: config.onDownload
-      ? (payload: AnnotationSavePayload) => {
-          try {
-            config.onDownload?.(payload)
-          } catch (error) {
-            console.error('[markbit] onDownload callback threw', error)
-          }
-        }
-      : undefined,
+      },
+    })),
     closeOverlay: close,
     // onClose is a lifecycle notification, not result-owning: Markbit always
     // tears down the overlay itself, and config.onClose (if any) just runs

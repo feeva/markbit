@@ -37,7 +37,7 @@ const shortcuts = [
       :class="forMobile ? 'w-72' : 'w-96'"
     >
       <p class="mb-2 text-sm">
-        {{ L('Pick a tool, draw on the image, then Copy or Download.') }}
+        {{ L('Pick a tool, draw on the image, then choose an action below.') }}
       </p>
       <!--
         Grid, not flex justify-between: each column wraps independently

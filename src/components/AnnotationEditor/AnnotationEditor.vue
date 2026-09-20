@@ -12,6 +12,7 @@ import { L } from '@/i18n'
 import type {
   AnnotationDocument,
   AnnotationSavePayload,
+  MarkbitAction,
   Tool,
   ToolSettings,
 } from '@/types/annotations'
@@ -20,15 +21,14 @@ interface Props {
   imageUrl: string
   forMobile?: boolean
   annotationData?: AnnotationDocument | null
+  actions?: MarkbitAction[]
 }
 
 interface Emits {
   (e: 'close'): void
-  (e: 'copy', data: AnnotationSavePayload): void
-  (e: 'download', data: AnnotationSavePayload): void
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), { actions: () => [] })
 const emit = defineEmits<Emits>()
 
 // `forMobile` is an optional override (e.g. for Cypress component tests that
@@ -539,12 +539,9 @@ const buildSavePayload = (): AnnotationSavePayload => {
   }
 }
 
-const handleCopy = () => {
-  emit('copy', buildSavePayload())
-}
-
-const handleDownload = () => {
-  emit('download', buildSavePayload())
+const handleActionClick = (id: string) => {
+  const action = props.actions.find((candidate) => candidate.id === id)
+  action?.onClick(buildSavePayload())
 }
 
 defineExpose({
@@ -581,14 +578,14 @@ defineExpose({
         :scale
         :selected-count="selectedNodes.length"
         :for-mobile="isMobileLayout"
+        :actions="actions"
         @select-tool="handleSelectTool"
         @update-tool-settings="handleUpdateToolSettings"
         @delete="handleDelete"
         @zoom-in="zoomIn"
         @zoom-out="zoomOut"
         @set-zoom="handleSetZoom"
-        @copy="handleCopy"
-        @download="handleDownload"
+        @action="handleActionClick"
       />
     </div>
 

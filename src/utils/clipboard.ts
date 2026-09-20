@@ -28,7 +28,7 @@ export async function copyToClipboard(dataUrl: string): Promise<void> {
 // problem worked around in copyToClipboard above (Safari requires
 // gesture-gated actions to run within the same synchronous task as the
 // click, not after a microtask/await boundary).
-function dataUrlToBlob(dataUrl: string): Blob {
+export function dataUrlToBlob(dataUrl: string): Blob {
   const [header, base64] = dataUrl.split(',')
   const mime = /data:(.*?);base64/.exec(header)?.[1] ?? 'image/png'
   const binary = atob(base64)
