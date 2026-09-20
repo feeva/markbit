@@ -1,0 +1,23 @@
+{
+  "name": "markbit",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2026-09-20",
+  // Tried setting assets.not_found_handling to "none" here to turn off
+  // classic Pages' SPA-fallback-serves-index.html-for-any-missing-path
+  // behavior (which once masked a real missing-asset 404 as a confusing
+  // "Failed to fetch dynamically imported module" error) — wrangler rejects
+  // it outright: "Configuration file for Pages projects does not support
+  // 'assets'". That field is exclusive to the newer unified Workers+assets
+  // platform (the one `wrangler pages project create` tries to delegate to
+  // by default — see that command's --force flag usage). Not worth a
+  // platform migration just for this; documenting it here so it isn't
+  // silently re-attempted later.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "markbit-usage",
+      "database_id": "ab10e3ea-5d8f-46bc-a923-020b07a69945",
+      "migrations_dir": "./migrations",
+    },
+  ],
+}

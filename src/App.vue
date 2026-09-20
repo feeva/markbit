@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { onMounted, watch } from 'vue'
 import AnnotationEditor from './components/AnnotationEditor/AnnotationEditor.vue'
 import LandingPage from './components/LandingPage.vue'
 import { useImageSource } from './composables/useImageSource'
 import { copyToClipboard, downloadDataUrl } from './utils/clipboard'
+import { track } from './utils/track'
 import type { AnnotationSavePayload } from './types/annotations'
 
 const {
@@ -16,13 +18,20 @@ const {
   reset,
 } = useImageSource()
 
+onMounted(() => track('pageview'))
+watch(imageUrl, (url, previous) => {
+  if (url && !previous) track('image_loaded')
+})
+
 function onCopy(payload: AnnotationSavePayload) {
+  track('copy')
   void copyToClipboard(payload.previewDataUrl).catch((err) =>
     console.error('[markbit] clipboard copy failed', err),
   )
 }
 
 function onDownload(payload: AnnotationSavePayload) {
+  track('download')
   downloadDataUrl(payload.previewDataUrl)
 }
 </script>

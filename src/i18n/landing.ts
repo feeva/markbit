@@ -46,6 +46,7 @@ const ko: Record<string, string> = {
   'Markbit started as an internal tool for explaining screen issues without the back-and-forth of "the button on the top right, no, the other one." It\'s free and open source under the AGPL-3.0.':
     'Markbit은 "오른쪽 위 버튼 말이에요, 아니 그거 말고"처럼 화면 문제를 말로 설명하며 주고받는 과정을 줄이기 위한 사내 도구에서 시작했습니다. AGPL-3.0으로 배포되는 무료 오픈소스입니다.',
   'View source on GitHub': 'GitHub에서 소스 보기',
+  'Send feedback': '피드백 보내기',
   Box: '박스',
   Text: '텍스트',
   Highlight: '하이라이트',

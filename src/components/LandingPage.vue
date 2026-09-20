@@ -185,6 +185,14 @@ const tools = [
       </div>
 
       <footer class="mt-2 flex flex-col items-center gap-2 text-xs text-base-content/60">
+        <a
+          href="https://github.com/feeva/markbit/issues/new"
+          target="_blank"
+          rel="noopener"
+          class="underline hover:text-base-content"
+        >
+          {{ t('Send feedback') }}
+        </a>
         <p>© {{ new Date().getFullYear() }} Markbit — AGPL-3.0</p>
       </footer>
     </div>

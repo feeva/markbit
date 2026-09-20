@@ -73,4 +73,11 @@ describe('<AnnotationEditor /> - Toolbar (Desktop)', () => {
     // No undo/redo, arrow-nudge, or zoom/tool hotkeys exist — don't claim they do.
     cy.contains('Undo').should('not.exist')
   })
+
+  it('offers a feedback link in the Help dropdown that opens in a new tab', () => {
+    cy.get('[data-tip="Help"]').should('be.visible').click()
+    cy.contains('a', 'Send feedback')
+      .should('have.attr', 'href', 'https://github.com/feeva/markbit/issues/new')
+      .and('have.attr', 'target', '_blank')
+  })
 })
