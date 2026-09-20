@@ -33,13 +33,13 @@ async function captureHostPage(): Promise<string> {
   return canvas.toDataURL('image/png')
 }
 
-// Re-exported (not just used internally as the no-onCopy/no-onDownload
-// default) so a host's custom onCopy/onDownload callback can compose with the
-// built-in behavior instead of reimplementing it, e.g. "copy normally, then
-// also log an analytics event". Actual implementation lives in
-// @/utils/clipboard, shared with src/App.vue's standalone product page.
+// Re-exported so a host's custom onCopy/onDownload callback can compose with
+// the built-in behavior instead of reimplementing it, e.g. "copy normally,
+// then also log an analytics event". Note this composition itself runs in
+// the host's page context (see open() below), so the same cross-frame
+// user-activation caveat documented in frame.ts's handleCopy applies if the
+// host's own callback calls these from here.
 export { copyToClipboard, downloadDataUrl } from '@/utils/clipboard'
-import { copyToClipboard, downloadDataUrl } from '@/utils/clipboard'
 
 // frame.js must be fetched from Markbit's own CDN origin, not the host page's
 // — a customer embedding <script src="https://markbit.abcbox.kr/loader.js"> on
@@ -130,46 +130,41 @@ export async function open(config: MarkbitConfig = {}): Promise<void> {
 
   frame.contentWindow?.focus() // so an immediate Escape reaches frame.ts's own listener
 
+  // onCopy/onDownload are only passed through when the host actually
+  // supplied one — undefined tells frame.ts to run the built-in default
+  // action itself, inside the iframe (see frame.ts's handleCopy for why that
+  // must happen there and not here). onCopy/onDownload are result-owning: a
+  // host override fully replaces our built-in action (no forced clipboard
+  // write on top of theirs) and we don't auto-close — the host now owns the
+  // payload's lifecycle and can call the returned MarkbitAPI's close() itself.
   const win = frame.contentWindow as (Window & { __markbitMount?: MarkbitMount }) | null
-  win?.__markbitMount?.(
-    imageUrl,
-    // onCopy/onDownload are result-owning: if the host supplied one, it fully
-    // replaces our built-in action (no forced clipboard write on top of
-    // theirs) and we don't auto-close — the host now owns the payload's
-    // lifecycle and can call the returned MarkbitAPI's close() itself.
-    (payload: AnnotationSavePayload) => {
-      if (config.onCopy) {
-        try {
-          config.onCopy(payload)
-        } catch (error) {
-          console.error('[markbit] onCopy callback threw', error)
+  win?.__markbitMount?.(imageUrl, {
+    onCopy: config.onCopy
+      ? (payload: AnnotationSavePayload) => {
+          try {
+            config.onCopy?.(payload)
+          } catch (error) {
+            console.error('[markbit] onCopy callback threw', error)
+          }
         }
-        return
-      }
-      void copyToClipboard(payload.previewDataUrl)
-        .catch((error) => console.error('[markbit] clipboard copy failed', error))
-        .finally(() => close())
-    },
-    // Unlike copy, downloading doesn't close the overlay by default either —
-    // a user may want to download and keep annotating (or copy afterwards too).
-    (payload: AnnotationSavePayload) => {
-      if (config.onDownload) {
-        try {
-          config.onDownload(payload)
-        } catch (error) {
-          console.error('[markbit] onDownload callback threw', error)
+      : undefined,
+    onDownload: config.onDownload
+      ? (payload: AnnotationSavePayload) => {
+          try {
+            config.onDownload?.(payload)
+          } catch (error) {
+            console.error('[markbit] onDownload callback threw', error)
+          }
         }
-        return
-      }
-      downloadDataUrl(payload.previewDataUrl)
-    },
+      : undefined,
+    closeOverlay: close,
     // onClose is a lifecycle notification, not result-owning: Markbit always
     // tears down the overlay itself, and config.onClose (if any) just runs
     // afterward so the host can react (e.g. resume their own paused UI).
-    () => {
+    onClose: () => {
       close()
       config.onClose?.()
     },
-  )
+  })
   config.onOpen?.()
 }

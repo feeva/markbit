@@ -12,16 +12,30 @@
  */
 import { createApp } from 'vue'
 import AnnotationEditor from '@/components/AnnotationEditor/AnnotationEditor.vue'
+import { copyToClipboard, downloadDataUrl } from '@/utils/clipboard'
 import type { AnnotationSavePayload } from '@/types/annotations'
 import cssText from '@/assets/main.css?inline'
 import iconSprite from '@/assets/icons-sprite.svg?url'
 
-export type MarkbitMount = (
-  imageUrl: string,
-  onCopy: (payload: AnnotationSavePayload) => void,
-  onDownload: (payload: AnnotationSavePayload) => void,
-  onClose: () => void,
-) => void
+export interface MarkbitMountCallbacks {
+  // Host overrides only — undefined means "no override, run the built-in
+  // clipboard-copy/file-download action". That default action MUST be
+  // triggered from inside this file (i.e. inside the iframe), not handed
+  // down as a parent-defined closure — see the comment on handleCopy below
+  // for why.
+  onCopy?: (payload: AnnotationSavePayload) => void
+  onDownload?: (payload: AnnotationSavePayload) => void
+  // Bare parent-side teardown (iframe removal, overflow restore), no
+  // config.onClose notification — used after the built-in copy action
+  // auto-closes the overlay, matching the pre-existing behavior where that
+  // path never fired the host's onClose.
+  closeOverlay: () => void
+  // ✕ button handler: parent-side teardown *plus* config.onClose
+  // notification.
+  onClose: () => void
+}
+
+export type MarkbitMount = (imageUrl: string, callbacks: MarkbitMountCallbacks) => void
 
 declare global {
   interface Window {
@@ -29,7 +43,7 @@ declare global {
   }
 }
 
-const mount: MarkbitMount = (imageUrl, onCopy, onDownload, onClose) => {
+const mount: MarkbitMount = (imageUrl, { onCopy, onDownload, closeOverlay, onClose }) => {
   // The <meta viewport> tag and the overflow:hidden reset are already baked
   // into embed.ts's srcdoc HTML for this iframe's document (see its comment
   // for why — a <meta> appended via JS after the fact isn't reliable on all
@@ -69,7 +83,43 @@ const mount: MarkbitMount = (imageUrl, onCopy, onDownload, onClose) => {
   mountPoint.className = 'h-screen w-screen grid'
   document.body.appendChild(mountPoint)
 
-  createApp(AnnotationEditor, { imageUrl, onCopy, onDownload, onClose }).mount(mountPoint)
+  // The default (no host override) copy/download actions run HERE, inside
+  // the iframe, rather than being delegated to a parent-defined closure —
+  // Safari requires navigator.clipboard.write() (and, it turns out, a
+  // synthetic <a download> .click()) to execute synchronously within the
+  // *same frame's* user-activation window as the click that triggered it.
+  // Even though embed.ts's iframe is same-origin and calling into its
+  // closures works fine functionally, the call would be running against the
+  // *parent* window's navigator/document — a different browsing context than
+  // the one the click's activation belongs to — and Safari silently rejects
+  // it with NotAllowedError. Chrome/Firefox are lenient about this; Safari
+  // is not. (Discovered via a real bug report: Copy/Download did nothing in
+  // Safari on the embed path but worked fine on the standalone product page,
+  // which has no iframe at all.)
+  const handleCopy = (payload: AnnotationSavePayload) => {
+    if (onCopy) {
+      onCopy(payload)
+      return
+    }
+    void copyToClipboard(payload.previewDataUrl)
+      .catch((error) => console.error('[markbit] clipboard copy failed', error))
+      .finally(() => closeOverlay())
+  }
+
+  const handleDownload = (payload: AnnotationSavePayload) => {
+    if (onDownload) {
+      onDownload(payload)
+      return
+    }
+    downloadDataUrl(payload.previewDataUrl)
+  }
+
+  createApp(AnnotationEditor, {
+    imageUrl,
+    onCopy: handleCopy,
+    onDownload: handleDownload,
+    onClose,
+  }).mount(mountPoint)
 
   // AnnotationEditor declares a `close` emit but never fires it itself
   // (starissue relied on wrapping it in a native <dialog> for Escape-to-close
