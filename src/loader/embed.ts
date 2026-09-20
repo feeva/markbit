@@ -73,6 +73,13 @@ function createFrameIframe(): Promise<HTMLIFrameElement> {
   return new Promise((resolvePromise, reject) => {
     const el = document.createElement('iframe')
     el.id = 'markbit-host'
+    // Permissions Policy gates clipboard-write per iframe, independent of
+    // same-origin-ness — Safari enforces this even for a same-origin srcdoc
+    // iframe (Chrome/Firefox are more lenient and work without it). Without
+    // this, frame.ts's navigator.clipboard.write() is silently blocked in
+    // Safari with no console output at all, which is easy to mistake for the
+    // user-activation issue this iframe already works around.
+    el.setAttribute('allow', 'clipboard-write')
     Object.assign(el.style, {
       position: 'fixed',
       inset: '0',
