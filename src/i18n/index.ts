@@ -8,9 +8,12 @@
 //      cy.contains('Blur Size: 25px')), because ToolSettingsDropdown.vue composes
 //      already-translated labels into templates: L('{0}: {1}px', L('Blur Size'), value).
 //      Translating 'Blur Size' would break that composed assertion.
-//   2. Markbit hasn't decided on a localization strategy yet — real multi-locale
-//      support (locale switching, browser-language detection, a ko.json) is out of
-//      scope until the product needs more than one language.
+//   2. The editor UI stays English-only for now — devtools like this are commonly
+//      English-labeled internationally, and translating every tool/shortcut label
+//      accurately is a larger effort than the landing page's marketing copy needs.
+//      Real locale switching (EN/KO) exists separately for the landing page only
+//      — see src/i18n/landing.ts — which doesn't touch this passthrough or the
+//      tests that depend on it.
 type LocalizeArg = string | number | boolean | null | undefined
 
 const interpolate = (template: string, args: LocalizeArg[]): string =>

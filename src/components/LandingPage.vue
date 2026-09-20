@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import Icon from '@/components/Icon.vue'
-import { L } from '@/i18n'
+import { locale, setLocale, t } from '@/i18n/landing'
+
+const GITHUB_URL = 'https://github.com/feeva/markbit'
+const GITHUB_REPO = 'feeva/markbit'
 
 defineProps<{
   isDraggingOver: boolean
@@ -34,50 +37,156 @@ function onFileInputChange(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (file) emit('file-picked', file)
 }
+
+// Public, unauthenticated GitHub API endpoint — CORS-enabled, no token
+// needed. Fails silently (rate-limited, offline, blocked by an extension):
+// the badge just shows the repo name without counts, which is a fine
+// degraded state rather than something worth surfacing as an error.
+const stars = ref<number | null>(null)
+const forks = ref<number | null>(null)
+
+onMounted(async () => {
+  try {
+    const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}`)
+    if (!response.ok) return
+    const data = await response.json()
+    stars.value = data.stargazers_count
+    forks.value = data.forks_count
+  } catch {
+    // Offline/blocked — the plain GitHub link still works without counts.
+  }
+})
+
+const tools = [
+  { icon: 'rectangle', label: 'Box' },
+  { icon: 'typography', label: 'Text' },
+  { icon: 'highlight', label: 'Highlight' },
+  { icon: 'writing', label: 'Draw' },
+  { icon: 'ripple', label: 'Blur' },
+  { icon: 'border-corners', label: 'Crop' },
+]
 </script>
 
 <template>
-  <div class="flex min-h-screen flex-col items-center gap-8 bg-base-200 px-6 py-16">
-    <div class="text-center">
-      <h1 class="text-3xl font-bold">Markbit</h1>
-      <p class="mt-1 text-base-content/70">{{ L('Paste. Mark. Share.') }}</p>
-    </div>
+  <div class="min-h-screen bg-base-200">
+    <div class="bg-gradient-to-br from-primary/10 via-base-200 to-secondary/10 px-6 pb-14 pt-8">
+      <div class="mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-3">
+        <a
+          :href="GITHUB_URL"
+          target="_blank"
+          rel="noopener"
+          class="flex items-center gap-2 whitespace-nowrap rounded-full border border-base-300 bg-base-100 px-3 py-1.5 text-xs shadow-sm transition-shadow hover:shadow-md sm:text-sm"
+        >
+          <Icon name="brand-github" />
+          <span class="font-medium">{{ GITHUB_REPO }}</span>
+          <span v-if="stars !== null" class="flex items-center gap-0.5 text-base-content/60">
+            <Icon name="star" />{{ stars }}
+          </span>
+          <span v-if="forks !== null" class="flex items-center gap-0.5 text-base-content/60">
+            <Icon name="git-fork" />{{ forks }}
+          </span>
+        </a>
 
-    <div
-      class="flex w-full max-w-xl flex-col items-center gap-4 rounded-box border-2 border-dashed p-12 text-center transition-colors"
-      :class="isDraggingOver ? 'border-primary bg-primary/5' : 'border-base-300'"
-      @drop="emit('drop', $event)"
-      @dragover="emit('dragover', $event)"
-      @dragleave="emit('dragleave', $event)"
-    >
-      <p class="text-base-content/80">
-        {{ L('Paste (Cmd/Ctrl+V), drop an image here, or choose a file') }}
-      </p>
-      <label class="btn btn-primary btn-sm">
-        {{ L('Choose a file') }}
-        <input type="file" accept="image/*" class="hidden" @change="onFileInputChange" />
-      </label>
-      <p v-if="error" class="text-sm text-error">{{ error }}</p>
-    </div>
+        <div class="join">
+          <button
+            class="btn btn-xs join-item"
+            :class="locale === 'en' ? 'btn-active' : ''"
+            @click="setLocale('en')"
+          >
+            EN
+          </button>
+          <button
+            class="btn btn-xs join-item"
+            :class="locale === 'ko' ? 'btn-active' : ''"
+            @click="setLocale('ko')"
+          >
+            한국어
+          </button>
+        </div>
+      </div>
 
-    <div class="w-full max-w-xl rounded-box bg-base-100 p-6">
-      <h2 class="mb-2 font-semibold">{{ L('Embed on your own site') }}</h2>
-      <p class="mb-3 text-sm text-base-content/70">
-        {{ L('Add this to any page. Press the hotkey to capture, mark up, and copy or download.') }}
-      </p>
-      <div class="join w-full">
-        <pre
-          class="join-item flex-1 overflow-x-auto rounded-l bg-base-300 p-3 text-xs"
-        ><code>{{ EMBED_SNIPPET }}</code></pre>
-        <button class="btn btn-sm join-item" @click="copySnippet">
-          <Icon name="copy" />
-          {{ copied ? L('Copied!') : '' }}
-        </button>
+      <div class="mx-auto mt-10 max-w-2xl text-center">
+        <h1
+          class="bg-gradient-to-r from-primary to-secondary bg-clip-text text-5xl font-extrabold tracking-tight text-transparent"
+        >
+          Markbit
+        </h1>
+        <p class="mt-3 text-lg text-base-content/70">{{ t('Paste. Mark. Share.') }}</p>
+
+        <div class="mt-8 flex flex-wrap justify-center gap-x-5 gap-y-4 sm:gap-x-8">
+          <div
+            v-for="tool in tools"
+            :key="tool.icon"
+            class="flex flex-col items-center gap-1 text-base-content/50"
+          >
+            <Icon :name="tool.icon" />
+            <span class="text-[11px]">{{ t(tool.label) }}</span>
+          </div>
+        </div>
       </div>
     </div>
 
-    <p class="max-w-xl text-center text-xs text-base-content/60">
-      {{ L('No account. No upload unless you share. Everything runs in your browser.') }}
-    </p>
+    <div class="mx-auto flex max-w-xl flex-col gap-8 px-6 py-12">
+      <div
+        class="flex flex-col items-center gap-4 rounded-box border-2 border-dashed p-12 text-center transition-colors"
+        :class="isDraggingOver ? 'border-primary bg-primary/5' : 'border-base-300 bg-base-100'"
+        @drop="emit('drop', $event)"
+        @dragover="emit('dragover', $event)"
+        @dragleave="emit('dragleave', $event)"
+      >
+        <p class="text-base-content/80">
+          {{ t('Paste (Cmd/Ctrl+V), drop an image here, or choose a file') }}
+        </p>
+        <label class="btn btn-primary btn-sm">
+          {{ t('Choose a file') }}
+          <input type="file" accept="image/*" class="hidden" @change="onFileInputChange" />
+        </label>
+        <p v-if="error" class="text-sm text-error">{{ error }}</p>
+      </div>
+
+      <div class="overflow-hidden rounded-box border border-base-300 shadow-sm">
+        <div class="bg-base-100 p-4">
+          <h2 class="mb-1 font-semibold">{{ t('Embed on your own site') }}</h2>
+          <p class="text-sm text-base-content/70">
+            {{
+              t('Add this to any page. Press the hotkey to capture, mark up, and copy or download.')
+            }}
+          </p>
+        </div>
+        <div class="flex items-center gap-2 bg-neutral p-4 text-neutral-content">
+          <!--
+            min-w-0 is load-bearing: a flex child defaults to min-width: auto,
+            which refuses to shrink below its content's intrinsic width. Without
+            it, this non-wrapping <pre> forces the whole page wider than the
+            viewport on mobile instead of scrolling internally via
+            overflow-x-auto (a classic flexbox overflow bug).
+          -->
+          <pre class="min-w-0 flex-1 overflow-x-auto text-xs"><code>{{ EMBED_SNIPPET }}</code></pre>
+          <button class="btn btn-sm shrink-0" @click="copySnippet">
+            <Icon name="copy" />
+            {{ copied ? t('Copied!') : '' }}
+          </button>
+        </div>
+      </div>
+
+      <p class="text-center text-xs text-base-content/60">
+        {{ t('No account. No upload unless you share. Everything runs in your browser.') }}
+      </p>
+
+      <div class="rounded-box bg-base-100 p-6 shadow-sm">
+        <h2 class="mb-2 font-semibold">{{ t('About Markbit') }}</h2>
+        <p class="text-sm text-base-content/70">
+          {{
+            t(
+              'Markbit started as an internal tool for explaining screen issues without the back-and-forth of "the button on the top right, no, the other one." It\'s free and open source under the AGPL-3.0.',
+            )
+          }}
+        </p>
+      </div>
+
+      <footer class="mt-2 flex flex-col items-center gap-2 text-xs text-base-content/60">
+        <p>© {{ new Date().getFullYear() }} Markbit — AGPL-3.0</p>
+      </footer>
+    </div>
   </div>
 </template>

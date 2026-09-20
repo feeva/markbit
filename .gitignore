@@ -22,3 +22,7 @@ cypress/screenshots/
 # Environment
 .env
 .env.local
+
+# Internal strategy doc (pricing hypotheses, license backlog, etc.) —
+# deliberately kept out of the public repo; see 2026-09-20 Decision Log entry.
+PLAN.md
