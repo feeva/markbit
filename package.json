@@ -22,6 +22,7 @@
     "cypress:open:e2e": "cypress open --e2e --browser chrome",
     "cypress:run:e2e": "cypress run --e2e --browser chrome",
     "icons:build": "node scripts/build-icon-sprite.mjs",
+    "release": "node scripts/release.mjs",
     "test:unit": "vitest run",
     "test:e2e": "npm run build:test && start-server-and-test preview http://localhost:4173 cypress:run:e2e"
   },

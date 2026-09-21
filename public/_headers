@@ -11,3 +11,17 @@
 
 /assets/*
   Access-Control-Allow-Origin: *
+
+# Same as above, for major-version-pinned embeds (public/v<N>/, staged by
+# scripts/release.mjs). :version is a Pages _headers placeholder — matches
+# one path segment (no "/"), not a plain "*" splat, since a rule may only
+# contain a single splat and /v:version/assets/* already uses its one splat
+# on the assets/* part.
+/v:version/loader.js
+  Access-Control-Allow-Origin: *
+
+/v:version/frame.js
+  Access-Control-Allow-Origin: *
+
+/v:version/assets/*
+  Access-Control-Allow-Origin: *
