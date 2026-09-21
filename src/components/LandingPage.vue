@@ -169,6 +169,8 @@ const tools = [
 
       <p class="text-center text-xs text-base-content/60">
         {{ t('privacyNote') }}
+        <br />
+        <span class="text-[11px] text-base-content/40">{{ t('usageNote') }}</span>
       </p>
 
       <div class="rounded-box bg-base-100 p-6 shadow-sm">

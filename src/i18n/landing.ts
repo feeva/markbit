@@ -46,7 +46,8 @@ const en: Record<string, string> = {
   embedTitle: 'Embed on your own site',
   embedDescription:
     'Add this to any page. Press the hotkey to capture, mark up, and copy or download.',
-  privacyNote: 'No account. No upload unless you share. Everything runs in your browser.',
+  privacyNote: 'No account. Your screenshots never leave your browser.',
+  usageNote: 'Anonymous aggregate usage counts only.',
   aboutTitle: 'About Markbit',
   aboutDescription:
     'Markbit started as an internal tool for capturing a screenshot, marking up exactly what\'s wrong, and sharing it — no more "the button on the top right, no, the other one." It\'s free and open source under the AGPL-3.0.',
@@ -61,17 +62,17 @@ const ko: Record<string, string> = {
   embedTitle: '내 사이트에 넣기',
   embedDescription:
     '아무 페이지에나 추가하세요. 단축키를 누르면 화면을 캡처해 표시하고 복사하거나 다운로드할 수 있습니다.',
-  privacyNote:
-    '회원가입 없음. 공유하지 않는 한 서버로 업로드하지 않습니다. 모든 처리는 브라우저에서 이루어집니다.',
+  privacyNote: '회원가입 없음. 스크린샷 처리는 브라우저 안에서만 이뤄집니다.',
+  usageNote: '사용 횟수만 익명으로 집계됩니다.',
   aboutTitle: 'Markbit 소개',
   aboutDescription:
     'Markbit은 화면을 캡처해 문제가 되는 부분을 정확히 표시하고 공유하기 위한 사내 도구에서 시작했습니다 — 더 이상 "오른쪽 위 버튼 말이에요, 아니 그거 말고" 같은 설명을 주고받을 필요가 없죠. AGPL-3.0으로 배포되는 무료 오픈소스입니다.',
   viewSource: 'GitHub에서 소스 보기',
   sendFeedback: '피드백 보내기',
   'Copied!': '복사됨!',
-  Box: '박스',
+  Box: '사각형',
   Text: '텍스트',
-  Highlight: '하이라이트',
+  Highlight: '강조',
   Draw: '그리기',
   Blur: '블러',
   Crop: '자르기',

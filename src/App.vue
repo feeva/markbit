@@ -5,7 +5,7 @@ import LandingPage from './components/LandingPage.vue'
 import { useImageSource } from './composables/useImageSource'
 import { copyToClipboard, downloadDataUrl } from './utils/clipboard'
 import { canShareFile, shareDataUrl } from './utils/share'
-import { track } from './utils/track'
+import { hasUsedMarkbitBefore, markHasUsedMarkbit, track } from './utils/track'
 import type { MarkbitAction } from './types/annotations'
 
 const {
@@ -19,9 +19,15 @@ const {
   reset,
 } = useImageSource()
 
-onMounted(() => track('pageview'))
+onMounted(() => {
+  track('pageview')
+  if (hasUsedMarkbitBefore()) track('returning_visit')
+})
 watch(imageUrl, (url, previous) => {
-  if (url && !previous) track('image_loaded')
+  if (url && !previous) {
+    track('image_loaded')
+    markHasUsedMarkbit()
+  }
 })
 
 // Copy/Download/Share are this page's own sample actions, not something
