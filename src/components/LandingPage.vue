@@ -111,7 +111,7 @@ const tools = [
         >
           Markbit
         </h1>
-        <p class="mt-3 text-lg text-base-content/70">{{ t('Paste. Mark. Share.') }}</p>
+        <p class="mt-3 text-lg text-base-content/70">{{ t('tagline') }}</p>
 
         <div class="mt-8 flex flex-wrap justify-center gap-x-5 gap-y-4 sm:gap-x-8">
           <div
@@ -135,10 +135,10 @@ const tools = [
         @dragleave="emit('dragleave', $event)"
       >
         <p class="text-base-content/80">
-          {{ t('Paste (Cmd/Ctrl+V), drop an image here, or choose a file') }}
+          {{ t('pasteHint') }}
         </p>
         <label class="btn btn-primary btn-sm">
-          {{ t('Choose a file') }}
+          {{ t('chooseFile') }}
           <input type="file" accept="image/*" class="hidden" @change="onFileInputChange" />
         </label>
         <p v-if="error" class="text-sm text-error">{{ error }}</p>
@@ -146,11 +146,9 @@ const tools = [
 
       <div class="overflow-hidden rounded-box border border-base-300 shadow-sm">
         <div class="bg-base-100 p-4">
-          <h2 class="mb-1 font-semibold">{{ t('Embed on your own site') }}</h2>
+          <h2 class="mb-1 font-semibold">{{ t('embedTitle') }}</h2>
           <p class="text-sm text-base-content/70">
-            {{
-              t('Add this to any page. Press the hotkey to capture, mark up, and copy or download.')
-            }}
+            {{ t('embedDescription') }}
           </p>
         </div>
         <div class="flex items-center gap-2 bg-neutral p-4 text-neutral-content">
@@ -170,17 +168,13 @@ const tools = [
       </div>
 
       <p class="text-center text-xs text-base-content/60">
-        {{ t('No account. No upload unless you share. Everything runs in your browser.') }}
+        {{ t('privacyNote') }}
       </p>
 
       <div class="rounded-box bg-base-100 p-6 shadow-sm">
-        <h2 class="mb-2 font-semibold">{{ t('About Markbit') }}</h2>
+        <h2 class="mb-2 font-semibold">{{ t('aboutTitle') }}</h2>
         <p class="text-sm text-base-content/70">
-          {{
-            t(
-              'Markbit started as an internal tool for explaining screen issues without the back-and-forth of "the button on the top right, no, the other one." It\'s free and open source under the AGPL-3.0.',
-            )
-          }}
+          {{ t('aboutDescription') }}
         </p>
       </div>
 
@@ -191,7 +185,7 @@ const tools = [
           rel="noopener"
           class="underline hover:text-base-content"
         >
-          {{ t('Send feedback') }}
+          {{ t('sendFeedback') }}
         </a>
         <p>© {{ new Date().getFullYear() }} Markbit — AGPL-3.0</p>
       </footer>
