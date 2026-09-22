@@ -189,7 +189,7 @@ const tools = [
         >
           {{ t('sendFeedback') }}
         </a>
-        <p>© {{ new Date().getFullYear() }} Markbit — AGPL-3.0</p>
+        <p>© {{ new Date().getFullYear() }} Markbit — MPL-2.0</p>
       </footer>
     </div>
   </div>

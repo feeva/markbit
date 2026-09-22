@@ -51,7 +51,9 @@ for why).
 
 ## License
 
-Markbit is licensed under the [GNU AGPL-3.0](LICENSE). If AGPL's terms don't
-work for your use case (e.g. you want to bundle Markbit into a closed-source
-product without the copyleft obligations), a commercial license is available
-— open an issue to discuss.
+Markbit is licensed under the [Mozilla Public License 2.0](LICENSE). MPL's
+copyleft applies only at the file level, to Markbit's own source files — you
+can embed or combine Markbit with proprietary code freely. If you modify
+Markbit's own source and want to keep those changes closed, or you'd rather
+not deal with MPL's terms at all, a commercial license is available — open an
+issue to discuss.
