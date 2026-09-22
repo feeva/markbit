@@ -128,4 +128,32 @@ describe('<AnnotationEditor />', () => {
       expect(textNodes[0].text()).to.equal('blur commit')
     })
   })
+
+  it('does not select canvas shapes when Cmd+A is pressed while typing text', () => {
+    mountEditor(EXISTING_TEXT_DOCUMENT)
+
+    cy.get('[data-tip="Text"]').click()
+    cy.get('.konvajs-content').click(500, 500) // a second, new text annotation
+    cy.get('textarea[placeholder="Type text and press Enter"]').type('hello')
+    cy.get('textarea[placeholder="Type text and press Enter"]').type('{cmd}a')
+
+    // Bug symptom: the global handleSelectAll() would select every
+    // annotation-shape on the layer (including the pre-existing text from
+    // EXISTING_TEXT_DOCUMENT), which surfaces as the Delete button becoming
+    // enabled while the textarea is still open and focused.
+    cy.get('[data-tip="Delete"]').should('be.disabled')
+    cy.get('textarea[placeholder="Type text and press Enter"]').should('have.focus')
+  })
+
+  it('deletes a character (not commit-and-close) when Backspace is pressed while typing', () => {
+    mountEditor()
+
+    cy.get('[data-tip="Text"]').click()
+    cy.get('.konvajs-content').click(240, 180)
+    cy.get('textarea[placeholder="Type text and press Enter"]').type('hello{backspace}')
+
+    cy.get('textarea[placeholder="Type text and press Enter"]')
+      .should('have.value', 'hell')
+      .and('have.focus')
+  })
 })

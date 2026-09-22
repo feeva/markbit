@@ -49,7 +49,7 @@ export function useTextEditor({ stage, layer, transformer }: UseTextEditorOption
     textarea.style.padding = `${Math.max(2, textNode.padding() * effectiveScaleX)}px`
     textarea.style.margin = '0px'
     textarea.style.border = '1px solid #3B82F6'
-    textarea.style.background = '#FFFFFF'
+    textarea.style.background = 'rgba(255, 255, 255, 0.5)'
     textarea.style.color = typeof textFill === 'string' ? textFill : '#1F2937'
     textarea.style.outline = 'none'
     textarea.style.resize = 'none'

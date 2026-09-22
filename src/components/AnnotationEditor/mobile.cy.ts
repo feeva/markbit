@@ -20,29 +20,47 @@ describe('<AnnotationEditor /> - Mobile Devices', () => {
     cy.contains('Undo').should('not.exist')
   })
 
-  it('shows standalone select button and defaults to the Marker tool in the mobile tools menu', () => {
-    cy.get('[data-tip="Select"]').should('be.visible').and('not.have.class', 'btn-active')
-    cy.get('[data-tip="Tools"]').should('be.visible').and('have.class', 'btn-active')
-    cy.get('[data-tip="Tools"] use').should('have.attr', 'href').and('contain', '#tabler-highlight')
+  it('lists tools as standalone buttons (not a picker) and defaults to Marker active', () => {
+    cy.get('[aria-label="Select"]').should('be.visible').and('not.have.class', 'btn-active')
+    cy.get('[aria-label="Crop"]').should('be.visible').and('not.have.class', 'btn-active')
+    cy.get('[aria-label="Box"]').should('be.visible').and('not.have.class', 'btn-active')
+    cy.get('[aria-label="Marker"]').should('be.visible').and('have.class', 'btn-active')
   })
 
-  it('can select a non-select tool from mobile tools menu', () => {
-    cy.get('[data-tip="Tools"]').click()
-    cy.contains('a', 'Text').should('exist')
-    cy.contains('a', 'Text').click({ force: true })
-    cy.get('[data-tip="Select"]').should('not.have.class', 'btn-active')
-    cy.get('[data-tip="Tools"]').should('have.class', 'btn-active')
-    cy.get('[data-tip="Tools"] use')
-      .should('have.attr', 'href')
-      .and('contain', '#tabler-typography')
+  it('can select a non-select tool directly from the mobile toolbar', () => {
+    cy.get('[aria-label="Text"]').click()
+
+    cy.get('[aria-label="Select"]').should('not.have.class', 'btn-active')
+    cy.get('[aria-label="Marker"]').should('not.have.class', 'btn-active')
+    cy.get('[aria-label="Text"]').should('have.class', 'btn-active')
   })
 
-  it('shows tool settings only for tools that support settings', () => {
-    cy.get('[data-tip="Tools"]').closest('.join').find('.dropdown').should('have.length', 1)
+  it('shows one shared settings dropdown only for tools that support settings', () => {
+    // Marker (the default active tool) supports settings.
+    cy.get('[data-cy="mobile-tool-settings"]').should('exist')
 
-    cy.get('[data-tip="Tools"]').click()
-    cy.contains('a', 'Box').click({ force: true })
-    cy.get('[data-tip="Tools"]').closest('.join').find('.dropdown').should('have.length', 2)
+    cy.get('[aria-label="Select"]').click()
+    cy.get('[data-cy="mobile-tool-settings"]').should('not.exist')
+
+    cy.get('[aria-label="Crop"]').click()
+    cy.get('[data-cy="mobile-tool-settings"]').should('not.exist')
+
+    cy.get('[aria-label="Box"]').click()
+    cy.get('[data-cy="mobile-tool-settings"]').should('exist')
+  })
+
+  it("reflects the active tool's own color/size range in the shared settings dropdown", () => {
+    // Marker default range is 10-40.
+    cy.get('[data-cy="mobile-tool-settings"] [role="button"]').click()
+    cy.get('[data-cy="mobile-tool-settings"] input[type="range"]')
+      .should('have.attr', 'min', '10')
+      .and('have.attr', 'max', '40')
+
+    cy.get('[aria-label="Text"]').click()
+    cy.get('[data-cy="mobile-tool-settings"] [role="button"]').click()
+    cy.get('[data-cy="mobile-tool-settings"] input[type="range"]')
+      .should('have.attr', 'min', '12')
+      .and('have.attr', 'max', '72')
   })
 
   it('caps mobile zoom to dynamic bounds (min: 0.5 or fitScale*0.5, max: 3x)', () => {

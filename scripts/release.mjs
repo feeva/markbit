@@ -29,7 +29,6 @@ if (!version || !/^\d+$/.test(version)) {
   process.exit(1)
 }
 
-const versionedBaseUrl = `https://markbit.abcbox.kr/v${version}`
 const distDir = resolve(root, 'dist')
 const versionDir = resolve(root, 'public', `v${version}`)
 
@@ -41,13 +40,11 @@ if (existsSync(versionDir)) {
   )
 }
 
-console.log(`Building with VITE_ASSET_BASE_URL=${versionedBaseUrl} ...`)
+// No env vars needed: vite.config.ts's base: './' makes dist/ relocatable to
+// any path, so a plain build is correct wherever it's served from.
+console.log(`Building...`)
 rmSync(distDir, { recursive: true, force: true })
-execSync('npm run build', {
-  cwd: root,
-  stdio: 'inherit',
-  env: { ...process.env, VITE_ASSET_BASE_URL: versionedBaseUrl },
-})
+execSync('npm run build', { cwd: root, stdio: 'inherit' })
 
 rmSync(versionDir, { recursive: true, force: true })
 mkdirSync(versionDir, { recursive: true })

@@ -19,8 +19,13 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  // Relative (not '/'): each chunk resolves against its own import.meta.url
+  // at runtime, so one dist/ build works whether it's served from the root,
+  // a self-hosted subpath (e.g. /markbit/), or a remote <script src> on a
+  // third-party page — no --base override needed.
+  base: './',
   build: {
-    sourcemap: true,
+    sourcemap: false,
     // icons-sprite.svg (3.7KB) is under Vite's default 4KB inline threshold, so
     // `?url` was resolving it to a data: URI instead of a real file. SVG <use
     // href="..."> can't reference data: URIs (browsers reject it as a

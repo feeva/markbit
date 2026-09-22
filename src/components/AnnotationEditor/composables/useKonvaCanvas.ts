@@ -8,6 +8,9 @@ export interface KonvaCanvasRefs {
   transformer: Ref<Konva.Transformer | null>
   selectionRectangle: Ref<Konva.Rect | null>
   backgroundImage: Ref<Konva.Image | null>
+  // Bumped on every transformerInstance.nodes(...) set call - see the
+  // override below for why this is needed.
+  selectionVersion: Ref<number>
 }
 
 export function useKonvaCanvas(
@@ -21,6 +24,7 @@ export function useKonvaCanvas(
   const transformer = ref<Konva.Transformer | null>(null)
   const selectionRectangle = ref<Konva.Rect | null>(null)
   const backgroundImage = ref<Konva.Image | null>(null)
+  const selectionVersion = ref(0)
   let handleShiftKeyChange: ((event: KeyboardEvent) => void) | null = null
   let resizeObserver: ResizeObserver | null = null
 
@@ -93,11 +97,22 @@ export function useKonvaCanvas(
     // That's what actually broke both the resize handles and (via whatever
     // reactive churn that triggered) the crop overlay. Using `arguments`
     // preserves the real call arity.
+    //
+    // rawNodes is bound to transformerInstance, the raw object — not to
+    // `transformer.value`, which Vue's `ref()` wraps in a reactive Proxy.
+    // Every read/write of the node list goes straight through this raw
+    // binding and never touches the Proxy's get/set traps, so a computed
+    // that calls `.nodes()` would silently cache its first value forever.
+    // selectionVersion is an explicit counter for anything (selectedNodes in
+    // useSelection.ts) that needs to know the selection actually changed.
     const rawNodes = transformerInstance.nodes.bind(transformerInstance)
     transformerInstance.nodes = function (this: Konva.Transformer, ...args: [Konva.Node[]] | []) {
       const result = args.length ? rawNodes(args[0]) : rawNodes()
-      if (args.length && args[0].length > 0) {
-        transformerInstance.moveToTop()
+      if (args.length) {
+        selectionVersion.value += 1
+        if (args[0].length > 0) {
+          transformerInstance.moveToTop()
+        }
       }
       return result
     } as Konva.Transformer['nodes']
@@ -154,5 +169,6 @@ export function useKonvaCanvas(
     transformer: transformer as Ref<Konva.Transformer | null>,
     selectionRectangle: selectionRectangle as Ref<Konva.Rect | null>,
     backgroundImage: backgroundImage as Ref<Konva.Image | null>,
+    selectionVersion,
   }
 }

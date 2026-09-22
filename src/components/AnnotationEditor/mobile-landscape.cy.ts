@@ -14,27 +14,28 @@ describe('<AnnotationEditor /> - Mobile Devices (Landscape)', () => {
     cy.get('[data-cy="canvas"]').should('exist').and('be.visible')
   })
 
-  it('shows standalone select and tools buttons in landscape with Marker active by default', () => {
-    cy.get('[data-tip="Select"]').should('be.visible').and('not.have.class', 'btn-active')
-    cy.get('[data-tip="Tools"]').should('be.visible').and('have.class', 'btn-active')
-    cy.get('[data-tip="Tools"] use').should('have.attr', 'href').and('contain', '#tabler-highlight')
+  it('lists tools as standalone buttons in landscape and defaults to Marker active', () => {
+    cy.get('[aria-label="Select"]').should('be.visible').and('not.have.class', 'btn-active')
+    cy.get('[aria-label="Marker"]').should('be.visible').and('have.class', 'btn-active')
   })
 
-  it('can select a non-select tool from landscape mobile tools menu', () => {
-    cy.get('[data-tip="Tools"]').click()
-    cy.contains('a', 'Pencil').should('exist')
-    cy.contains('a', 'Pencil').click({ force: true })
-    cy.get('[data-tip="Select"]').should('not.have.class', 'btn-active')
-    cy.get('[data-tip="Tools"]').should('have.class', 'btn-active')
-    cy.get('[data-tip="Tools"] use').should('have.attr', 'href').and('contain', '#tabler-writing')
+  it('can select a non-select tool directly from the landscape mobile toolbar', () => {
+    cy.get('[aria-label="Pencil"]').click()
+
+    cy.get('[aria-label="Select"]').should('not.have.class', 'btn-active')
+    cy.get('[aria-label="Marker"]').should('not.have.class', 'btn-active')
+    cy.get('[aria-label="Pencil"]').should('have.class', 'btn-active')
   })
 
-  it('shows tool settings only for supported tools in landscape', () => {
-    cy.get('[data-tip="Tools"]').closest('.join').find('.dropdown').should('have.length', 1)
+  it('shows one shared settings dropdown only for tools that support settings in landscape', () => {
+    // Marker (the default active tool) supports settings.
+    cy.get('[data-cy="mobile-tool-settings"]').should('exist')
 
-    cy.get('[data-tip="Tools"]').click()
-    cy.contains('a', 'Text').click({ force: true })
-    cy.get('[data-tip="Tools"]').closest('.join').find('.dropdown').should('have.length', 2)
+    cy.get('[aria-label="Crop"]').click()
+    cy.get('[data-cy="mobile-tool-settings"]').should('not.exist')
+
+    cy.get('[aria-label="Text"]').click()
+    cy.get('[data-cy="mobile-tool-settings"]').should('exist')
   })
 
   it('caps landscape mobile zoom to dynamic bounds (min: 0.5 or fitScale*0.5, max: 3x)', () => {

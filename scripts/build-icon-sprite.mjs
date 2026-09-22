@@ -19,7 +19,7 @@ const ICON_NAMES = [
   'border-corners',
   'rectangle',
   'chevron-down',
-  'typography',
+  'letter-case',
   'highlight',
   'writing',
   'ripple',

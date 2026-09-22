@@ -68,7 +68,7 @@ const ko: Record<string, string> = {
   aboutDescription:
     'Markbit은 화면을 캡처해 문제가 되는 부분을 정확히 표시하고 공유하기 위한 사내 도구에서 시작했습니다 — 더 이상 "오른쪽 위 버튼 말이에요, 아니 그거 말고" 같은 설명을 주고받을 필요가 없죠. MPL-2.0으로 배포되는 무료 오픈소스입니다.',
   viewSource: 'GitHub에서 소스 보기',
-  sendFeedback: '피드백 보내기',
+  sendFeedback: '의견 등록하기',
   'Copied!': '복사됨!',
   Box: '사각형',
   Text: '텍스트',

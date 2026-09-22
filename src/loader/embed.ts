@@ -40,21 +40,17 @@ async function captureHostPage(): Promise<string> {
 // the host's own callback calls these from here.
 export { copyToClipboard, downloadDataUrl } from '@/utils/clipboard'
 
-// frame.js must be fetched from Markbit's own CDN origin, not the host page's
-// — a customer embedding <script src="https://markbit.abcbox.kr/loader.js"> on
-// https://their-product.com must not resolve this to their-product.com/frame.js.
-// VITE_ASSET_BASE_URL is baked in at build time (see .env.production) and
-// always points at Markbit's own deployed domain; it's deliberately NOT
-// derived from import.meta.url (this chunk's own served URL), because that
-// would break the moment loader.js is ever consumed as a bundled dependency
-// (e.g. a future npm package) rather than loaded via a real <script src> —
-// import.meta.url there would resolve to the *consumer's* own bundle output,
-// not Markbit's domain. The window.location.origin fallback only matters for
-// local dev/preview/e2e builds, which intentionally don't set the env var
-// (see package.json's test:e2e using `--mode test`) and stay same-origin.
+// frame.js must load from wherever THIS chunk actually got served from, not
+// the host page's origin — a customer embedding our script must not resolve
+// frame.js against their-product.com. import.meta.url gives exactly that,
+// and works because vite.config.ts's `base: './'` resolves chunk imports the
+// same way. frame.js sits one directory up from this chunk (dist/frame.js
+// vs dist/assets/embed-*.js).
 function frameScriptUrl(): string {
-  const base = import.meta.env.VITE_ASSET_BASE_URL || window.location.origin
-  return new URL('/frame.js', base).toString()
+  // @vite-ignore: intentionally NOT statically resolvable at build time —
+  // frame.js is a separate Rollup entry point, not an asset next to this
+  // source file, and its real served location is only known at runtime.
+  return new URL(/* @vite-ignore */ '../frame.js', import.meta.url).toString()
 }
 
 // `srcdoc` (not `src: 'about:blank'` + a script injected afterwards): the

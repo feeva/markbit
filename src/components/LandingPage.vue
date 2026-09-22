@@ -59,7 +59,7 @@ onMounted(async () => {
 
 const tools = [
   { icon: 'rectangle', label: 'Box' },
-  { icon: 'typography', label: 'Text' },
+  { icon: 'letter-case', label: 'Text' },
   { icon: 'highlight', label: 'Highlight' },
   { icon: 'writing', label: 'Draw' },
   { icon: 'ripple', label: 'Blur' },

@@ -28,7 +28,11 @@ interface Emits {
   (e: 'close'): void
 }
 
-const props = withDefaults(defineProps<Props>(), { actions: () => [] })
+// forMobile: undefined (not omitted) matters - Vue casts an absent Boolean
+// prop to `false` unless it has an explicit default, which would make
+// `props.forMobile ?? isNarrowContainer.value` below always resolve to
+// `false` (the real embed never passes forMobile at all).
+const props = withDefaults(defineProps<Props>(), { actions: () => [], forMobile: undefined })
 const emit = defineEmits<Emits>()
 
 // `forMobile` is an optional override (e.g. for Cypress component tests that
@@ -103,7 +107,7 @@ const toolSettings = ref<Record<Tool, ToolSettings>>({
 const canvasRef = ref<HTMLDivElement | null>(null)
 const cursorMode = ref<string | null>(null)
 
-const { stage, layer, overlayLayer, transformer, selectionRectangle, backgroundImage } =
+const { stage, layer, overlayLayer, transformer, selectionRectangle, backgroundImage, selectionVersion } =
   useKonvaCanvas(canvasRef, props.imageUrl, cursorMode)
 
 const {
@@ -125,11 +129,79 @@ const {
   updateSelection,
   endSelection,
   selectObject,
+  toggleObjectSelection,
   deselectAll,
   deleteSelected,
-} = useSelection(stage, transformer, selectionRectangle, backgroundImage)
+} = useSelection(stage, transformer, selectionRectangle, backgroundImage, selectionVersion)
 
 const { startTextEdit, destroyActiveTextarea } = useTextEditor({ stage, layer, transformer })
+
+interface ToolPropertyAdapter {
+  getColor: (node: Konva.Node) => string | undefined
+  setColor: (node: Konva.Node, color: string) => void
+  getWidth: (node: Konva.Node) => number
+  setWidth: (node: Konva.Node, width: number) => void
+}
+
+const strokeAdapter: ToolPropertyAdapter = {
+  getColor: (node) => {
+    const stroke = (node as Konva.Shape).stroke()
+    return typeof stroke === 'string' ? stroke : undefined
+  },
+  setColor: (node, color) => (node as Konva.Shape).stroke(color),
+  getWidth: (node) => (node as Konva.Shape).strokeWidth(),
+  setWidth: (node, width) => (node as Konva.Shape).strokeWidth(width),
+}
+
+// Blur is excluded: it bakes a rasterized blur into the image and destroys
+// itself after drawing (see useAnnotationTools.ts's endTool()), so it has no
+// color/width to edit afterward.
+const EDITABLE_TOOL_ADAPTERS: Partial<Record<Tool, ToolPropertyAdapter>> = {
+  text: {
+    getColor: (node) => {
+      const fill = (node as Konva.Text).fill()
+      return typeof fill === 'string' ? fill : undefined
+    },
+    setColor: (node, color) => (node as Konva.Text).fill(color),
+    getWidth: (node) => (node as Konva.Text).fontSize(),
+    setWidth: (node, width) => (node as Konva.Text).fontSize(width),
+  },
+  rectangle: strokeAdapter,
+  marker: strokeAdapter,
+  pencil: strokeAdapter,
+}
+
+// Matches no swatch, so a multi-select with differing colors shows none
+// highlighted instead of an arbitrary one.
+const MIXED_COLOR = ''
+
+const selectedAnnotationType = computed<Tool | null>(() => {
+  if (selectedNodes.value.length === 0) return null
+
+  const types = new Set(selectedNodes.value.map((node) => node.getAttr('annotationType') as Tool))
+  if (types.size !== 1) return null
+
+  const [type] = types
+  return EDITABLE_TOOL_ADAPTERS[type] ? type : null
+})
+
+const displayToolSettings = computed<Record<Tool, ToolSettings>>(() => {
+  const type = selectedAnnotationType.value
+  if (!type) return toolSettings.value
+
+  const adapter = EDITABLE_TOOL_ADAPTERS[type]!
+  const [first, ...rest] = selectedNodes.value
+  const firstColor = adapter.getColor(first)
+  const uniformColor = firstColor !== undefined && rest.every((node) => adapter.getColor(node) === firstColor)
+
+  return {
+    ...toolSettings.value,
+    [type]: {
+      lineColor: uniformColor ? firstColor! : MIXED_COLOR,
+      lineWidth: adapter.getWidth(first),
+    },
+  }
+})
 
 const movingSelection = ref<{
   start: { x: number; y: number }
@@ -272,7 +344,25 @@ const handleSelectTool = (tool: Tool) => {
 }
 
 const handleUpdateToolSettings = (tool: Tool, settings: Partial<ToolSettings>) => {
+  // Also updates the "next new shape" default: a freshly-drawn shape
+  // auto-selects itself (endTool() in useAnnotationTools.ts), so without
+  // this the very next shape would revert to the hardcoded default.
   toolSettings.value[tool] = { ...toolSettings.value[tool], ...settings }
+
+  // While a selection of this tool's own type is active, its dropdown also
+  // edits those nodes directly - see displayToolSettings above.
+  const adapter = EDITABLE_TOOL_ADAPTERS[tool]
+  if (adapter && selectedAnnotationType.value === tool) {
+    selectedNodes.value.forEach((node) => {
+      if (settings.lineColor !== undefined) adapter.setColor(node, settings.lineColor)
+      if (settings.lineWidth !== undefined) adapter.setWidth(node, settings.lineWidth)
+    })
+    // Re-assigning nodes forces the Transformer to recompute its bounding
+    // box - matters for text, where fontSize changes the node's height
+    // (same pattern as useTextEditor.ts's commitTextEdit).
+    transformer.value?.nodes([...selectedNodes.value])
+    layer.value?.batchDraw()
+  }
 }
 
 const handleSetZoom = (preset: 'fit' | 50 | 100 | 300) => {
@@ -352,6 +442,14 @@ const handlePointerStart = (event: Konva.KonvaEventObject<PointerEvent>) => {
   const objectUnderCursor = handleResolveSelectableNode(stage.value.getIntersection(pointerPos))
 
   if (objectUnderCursor) {
+    // Shift-click adds/removes just this one object to/from the selection —
+    // it never starts a move-drag, even if the object was already selected.
+    if (event.evt.shiftKey) {
+      toggleObjectSelection(objectUnderCursor)
+      handleUpdateHoverCursor(pointerPos)
+      return
+    }
+
     const currentNodes = transformer.value?.nodes() || []
     const clickedInSelection = currentNodes.some((node) => node._id === objectUnderCursor._id)
 
@@ -462,7 +560,17 @@ const handleSelectAll = () => {
   layer.value.batchDraw()
 }
 
+const isTypingInTextField = (target: EventTarget | null): boolean => {
+  if (!(target instanceof HTMLElement)) return false
+  return target.tagName === 'TEXTAREA' || target.tagName === 'INPUT' || target.isContentEditable
+}
+
 const handleKeyDown = (event: KeyboardEvent) => {
+  // This listener is on window, so it also fires while the text-annotation
+  // textarea has focus - without this guard, Delete/Backspace/Cmd+A while
+  // typing ran these canvas shortcuts instead of the textarea's own.
+  if (isTypingInTextField(event.target)) return
+
   // Delete key
   if (event.key === 'Delete' || event.key === 'Backspace') {
     event.preventDefault()
@@ -607,7 +715,7 @@ defineExpose({
     >
       <AnnotationToolbar
         :active-tool="activeTool"
-        :tool-settings="toolSettings"
+        :tool-settings="displayToolSettings"
         :scale
         :selected-count="selectedNodes.length"
         :for-mobile="isMobileLayout"

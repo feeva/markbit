@@ -6,10 +6,14 @@ export function useSelection(
   transformer: Ref<Konva.Transformer | null>,
   selectionRectangle: Ref<Konva.Rect | null>,
   backgroundImage: Ref<Konva.Image | null>,
+  // See useKonvaCanvas.ts's nodes() override for why selectedNodes can't
+  // just depend on transformer.value.nodes() directly.
+  selectionVersion: Ref<number>,
 ) {
   const selectionCoords = ref<Record<string, number>>({})
 
   const selectedNodes = computed(() => {
+    selectionVersion.value // register dependency - see param comment above
     const nodes = transformer.value?.nodes() || []
     // Exclude the background image from selected nodes count
     return nodes.filter((node) => node._id !== backgroundImage.value?._id)
@@ -88,6 +92,22 @@ export function useSelection(
     transformer.value.nodes([object])
   }
 
+  // Shift-click: adds object to the current selection, or removes it if it's
+  // already selected — unlike selectObject, which always replaces the whole
+  // selection with just this one object.
+  const toggleObjectSelection = (object: Konva.Node) => {
+    if (!transformer.value) return
+    if (object._id !== backgroundImage.value?._id && !object.hasName('annotation-shape')) return
+
+    const currentNodes = transformer.value.nodes()
+    const alreadySelected = currentNodes.some((node) => node._id === object._id)
+    const nextNodes = alreadySelected
+      ? currentNodes.filter((node) => node._id !== object._id)
+      : [...currentNodes, object]
+
+    transformer.value.nodes(nextNodes)
+  }
+
   const deselectAll = () => {
     if (!transformer.value) return
     transformer.value.nodes([])
@@ -109,6 +129,7 @@ export function useSelection(
     startSelection,
     updateSelection,
     endSelection,
+    toggleObjectSelection,
     selectObject,
     deselectAll,
     deleteSelected,

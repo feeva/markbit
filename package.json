@@ -2,19 +2,25 @@
   "name": "markbit-web",
   "version": "0.0.0",
   "private": true,
-  "license": "MPL-2.0",
+  "license": "Mozilla Public License Version 2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/feeva/markbit"
   },
   "type": "module",
+  "main": "dist/loader.js",
+  "files": [
+    "dist/loader.js",
+    "dist/frame.js",
+    "dist/assets",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "build-only": "vite build",
-    "build-only:test": "vite build --mode test",
-    "build:test": "run-p type-check build-only:test",
     "type-check": "vue-tsc --build",
     "format": "prettier --write --experimental-cli src/",
     "cypress:open": "cypress open --component",
@@ -24,7 +30,8 @@
     "icons:build": "node scripts/build-icon-sprite.mjs",
     "release": "node scripts/release.mjs",
     "test:unit": "vitest run",
-    "test:e2e": "npm run build:test && start-server-and-test preview http://localhost:4173 cypress:run:e2e"
+    "test:e2e": "npm run build && start-server-and-test preview http://localhost:4173 cypress:run:e2e",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

@@ -50,6 +50,7 @@ const createSelectionContext = () => {
     ref(transformer) as unknown as Ref<Konva.Transformer | null>,
     ref(selectionRectangle) as unknown as Ref<Konva.Rect | null>,
     ref(backgroundImage) as unknown as Ref<Konva.Image | null>,
+    ref(0),
   )
 
   return {
@@ -116,6 +117,28 @@ describe('useSelection', () => {
 
     ctx.selection.deselectAll()
     expect(ctx.transformer.nodes()).to.have.length(0)
+
+    ctx.cleanup()
+  })
+
+  it('toggleObjectSelection adds an unselected object to the current selection', () => {
+    const ctx = createSelectionContext()
+
+    ctx.selection.selectObject(ctx.shapeA)
+    ctx.selection.toggleObjectSelection(ctx.shapeB)
+
+    expect(ctx.transformer.nodes()).to.deep.equal([ctx.shapeA, ctx.shapeB])
+
+    ctx.cleanup()
+  })
+
+  it('toggleObjectSelection removes an already-selected object, keeping the rest', () => {
+    const ctx = createSelectionContext()
+
+    ctx.transformer.nodes([ctx.shapeA, ctx.shapeB])
+    ctx.selection.toggleObjectSelection(ctx.shapeA)
+
+    expect(ctx.transformer.nodes()).to.deep.equal([ctx.shapeB])
 
     ctx.cleanup()
   })
