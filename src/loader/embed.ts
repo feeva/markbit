@@ -20,7 +20,77 @@ import type { MarkbitConfig } from './main'
 let iframe: HTMLIFrameElement | null = null
 let originalOverflow = { html: '', body: '' }
 
+// Defensive only (the actual fix for the style-loss race is the two-shot
+// capture in captureHostPage() below, not this): guards against open() ever
+// running while the tab is literally hidden or the window unfocused, e.g. if
+// a host triggers it programmatically rather than from a click. A tried,
+// unproven fixed delay here (waiting for visibility/focus plus a flat 250ms)
+// didn't measurably help the observed race, so it's not worth stacking more
+// latency on top of the two-shot capture's own cost.
+function waitForVisibleAndSettled(): Promise<void> {
+  return new Promise((resolve) => {
+    function settle() {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+    }
+    function isReady() {
+      return document.visibilityState === 'visible' && document.hasFocus()
+    }
+    if (isReady()) {
+      settle()
+      return
+    }
+    function handler() {
+      if (!isReady()) return
+      document.removeEventListener('visibilitychange', handler)
+      window.removeEventListener('focus', handler)
+      settle()
+    }
+    document.addEventListener('visibilitychange', handler)
+    window.addEventListener('focus', handler)
+  })
+}
+
+// Mirrors html2canvas-pro's own parseDocumentSize() (the source of its
+// "Document cloned ... with size WxH" log line) so the real page's height
+// can be compared against what it measured for the clone.
+function measureDocumentHeight(doc: Document): number {
+  const body = doc.body
+  const html = doc.documentElement
+  return Math.max(
+    body.scrollHeight,
+    html.scrollHeight,
+    body.offsetHeight,
+    html.offsetHeight,
+    body.clientHeight,
+    html.clientHeight,
+  )
+}
+
+// html2canvas-pro's logger (enabled by `logging`, on by default) writes
+// `console.debug(id, "<n>ms", message)` for each step - this taps that one
+// line without suppressing it, to read the clone's measured height back out
+// without needing changes upstream.
+async function renderAndReadClonedHeight(
+  render: () => Promise<HTMLCanvasElement>,
+): Promise<{ canvas: HTMLCanvasElement; clonedHeight: number | null }> {
+  let clonedHeight: number | null = null
+  const originalDebug = console.debug
+  console.debug = (...args: unknown[]) => {
+    const message = typeof args[2] === 'string' ? args[2] : ''
+    const match = /with size \d+x(\d+) using computed rendering/.exec(message)
+    if (match) clonedHeight = Number(match[1])
+    originalDebug.apply(console, args)
+  }
+  try {
+    const canvas = await render()
+    return { canvas, clonedHeight }
+  } finally {
+    console.debug = originalDebug
+  }
+}
+
 async function captureHostPage(): Promise<string> {
+  await waitForVisibleAndSettled()
   const viewport = window.visualViewport
   const width = Math.max(1, Math.round(viewport?.width ?? window.innerWidth))
   const height = Math.max(1, Math.round(viewport?.height ?? window.innerHeight))
@@ -28,8 +98,40 @@ async function captureHostPage(): Promise<string> {
   const y = Math.max(0, Math.round(viewport?.pageTop ?? window.scrollY))
 
   const { default: html2canvas } = await import('html2canvas-pro')
-  const canvas = await html2canvas(document.documentElement, { x, y, width, height, scale: 1 })
-  return canvas.toDataURL('image/png')
+  // foreignObjectRendering (tried, reverted): rasterizes via an SVG
+  // <foreignObject> using the browser's own renderer instead of html2canvas's
+  // default manual DOM-clone + computed-style-reparse pass. It did dodge the
+  // clone/cache-timing style-loss bugs (e.g. yorickshan/html2canvas-pro#123,
+  // #217) but broke any element with a CSS `transform` - service-console's
+  // review-app image viewers pan/zoom via `transform: scale()/translate()`ing
+  // the <img> itself, and foreignObject's own coordinate system doesn't
+  // compose with that correctly, so captured photos came out visibly warped.
+  // That regression is worse than the original bug, so back to the default.
+  const render = () => html2canvas(document.documentElement, { x, y, width, height, scale: 1 })
+
+  // Retry loop (bounded, not just a single retry): html2canvas-pro's clone
+  // step (DocumentCloner.toIFrame) reads each <style> tag's live
+  // sheet.cssRules to serialize it into the clone - occasionally (confirmed
+  // via its own `logging: true` output) that read races something and comes
+  // back empty, finishing suspiciously fast and producing an unstyled,
+  // taller-than-normal render (no flex/grid/overflow constraints applied),
+  // with no thrown error to catch. A single retry isn't always enough (seen
+  // failing twice in a row), so this keeps retrying, up to a bound, as long
+  // as the clone's own logged height comes out implausibly taller than the
+  // real page's current height - and otherwise stops as soon as one looks
+  // sane, rather than always paying for a fixed number of attempts.
+  const MAX_ATTEMPTS = 4
+  const SUSPECT_HEIGHT_RATIO = 1.2
+  const realHeight = measureDocumentHeight(document)
+  let canvas: HTMLCanvasElement | null = null
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+    const result = await renderAndReadClonedHeight(render)
+    canvas = result.canvas
+    if (result.clonedHeight === null || result.clonedHeight <= realHeight * SUSPECT_HEIGHT_RATIO) {
+      break
+    }
+  }
+  return canvas!.toDataURL('image/png')
 }
 
 // Re-exported so a host's custom action onClick can compose with the
