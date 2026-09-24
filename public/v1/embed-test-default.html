@@ -1,0 +1,49 @@
+<!doctype html>
+<!--
+  Same fixture as embed-test.html, minus the data-config override — this
+  exercises frame.ts's built-in default Copy/Download sample actions through
+  the real embed iframe, which embed-test.html's data-config deliberately
+  replaces (and extends with a third, Share, action). Needed as a separate
+  page rather than a toggle on embed-test.html: loader.js reads
+  script.dataset.config once, synchronously, at module init, so there's no
+  way to flip it at runtime from DevTools without reloading with the
+  attribute already removed from the HTML source.
+
+  Kept around permanently (not a throwaway test) since it's the only fixture
+  that actually exercises the code path a real Safari user activation bug
+  hid in (see 2026-09-20 PLAN.md decision log: frame.ts must run the default
+  copy/download action inside the iframe itself, not via a parent-defined
+  closure — Safari silently rejects navigator.clipboard.write() otherwise).
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Markbit embed test (default copy/download)</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #f4f4f5;
+        color: #18181b;
+      }
+
+      .hero {
+        padding: 48px 32px;
+        background: linear-gradient(135deg, oklch(0.7 0.2 30), oklch(0.7 0.2 300));
+        color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="hero">
+      <h1>Host page — default copy/download (no overrides)</h1>
+      <p>
+        Copy should write a real image to the system clipboard; Download should save a real PNG
+        file. Press Ctrl/Cmd+Shift+M to open Markbit.
+      </p>
+    </section>
+
+    <script type="module" src="/loader.js" data-hotkey="ctrl+shift+m"></script>
+  </body>
+</html>
