@@ -2,13 +2,42 @@ import tailwindcss from '@tailwindcss/vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 import { resolve } from 'node:path'
+import { execSync } from 'node:child_process'
+import type { Plugin } from 'vite'
 // `defineConfig` from 'vitest/config' re-exports Vite's own, just with the `test`
 // field typed — same as starissue's vite.config.ts.
 import { defineConfig } from 'vitest/config'
 
+function git(cmd: string): string {
+  try {
+    return execSync(`git ${cmd}`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+  } catch {
+    return ''
+  }
+}
+
+// Appends a build stamp comment to the built index.html so the deployed
+// version can be identified with `curl https://markbit.abcbox.kr | tail -3`.
+// "-dirty" means the working tree had uncommitted changes at build time, so
+// the commit alone can't reproduce this build.
+function buildStamp(): Plugin {
+  return {
+    name: 'build-stamp',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html) {
+        const commit = git('rev-parse --short HEAD') || 'unknown'
+        const dirty = git('status --porcelain') ? '-dirty' : ''
+        return `${html.trimEnd()}\n<!-- build: ${new Date().toISOString()} commit: ${commit}${dirty} -->\n`
+      },
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [vue(), tailwindcss()],
+  plugins: [vue(), tailwindcss(), buildStamp()],
   test: {
     globals: true,
     environment: 'jsdom',

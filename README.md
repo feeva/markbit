@@ -7,8 +7,7 @@ or embed on your own site with a single `<script>` tag.
 
 **Try it:** [markbit.abcbox.kr](https://markbit.abcbox.kr)
 
-No account, no server upload unless you explicitly share — everything runs in
-your browser.
+No account, no server upload unless you explicitly share — Your screenshots never leave your browser.
 
 ## Embed it on your own site
 
