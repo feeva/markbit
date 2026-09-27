@@ -17,7 +17,7 @@
 
 import { execSync } from 'node:child_process'
 import { cpSync, rmSync, mkdirSync, existsSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
+import { dirname, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -48,7 +48,13 @@ execSync('npm run build', { cwd: root, stdio: 'inherit' })
 
 rmSync(versionDir, { recursive: true, force: true })
 mkdirSync(versionDir, { recursive: true })
-cpSync(distDir, versionDir, { recursive: true })
+// Vite copies all of public/ into dist/, including earlier snapshots (public/v1/,
+// ...) — without this filter a re-release nests the old one inside the new
+// (public/v1/v1/), and every release after that nests one level deeper.
+cpSync(distDir, versionDir, {
+  recursive: true,
+  filter: (src) => !/^v\d+$/.test(relative(distDir, src).split(sep)[0]),
+})
 
 console.log(`\nStaged into public/v${version}/.`)
 console.log(`Next steps:`)
