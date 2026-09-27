@@ -10,7 +10,7 @@ defineProps<{ forMobile: boolean }>()
 // shortcuts that don't work.
 const shortcuts = [
   { keys: 'Delete / Backspace', description: 'Delete selection' },
-  { keys: 'Cmd/Ctrl + A', description: 'Select all' },
+  { keys: 'Ctrl + A', description: 'Select all' },
   { keys: 'Shift (resizing)', description: 'Lock aspect ratio' },
   { keys: 'Enter', description: 'Finish text edit' },
   { keys: 'Escape', description: 'Cancel text edit' },

@@ -129,13 +129,13 @@ describe('<AnnotationEditor />', () => {
     })
   })
 
-  it('does not select canvas shapes when Cmd+A is pressed while typing text', () => {
+  it('does not select canvas shapes when Ctrl+A is pressed while typing text', () => {
     mountEditor(EXISTING_TEXT_DOCUMENT)
 
     cy.get('[data-tip="Text"]').click()
     cy.get('.konvajs-content').click(500, 500) // a second, new text annotation
     cy.get('textarea[placeholder="Type text and press Enter"]').type('hello')
-    cy.get('textarea[placeholder="Type text and press Enter"]').type('{cmd}a')
+    cy.get('textarea[placeholder="Type text and press Enter"]').type('{ctrl}a')
 
     // Bug symptom: the global handleSelectAll() would select every
     // annotation-shape on the layer (including the pre-existing text from
