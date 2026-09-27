@@ -152,7 +152,12 @@ function frameScriptUrl(): string {
   // @vite-ignore: intentionally NOT statically resolvable at build time —
   // frame.js is a separate Rollup entry point, not an asset next to this
   // source file, and its real served location is only known at runtime.
-  return new URL(/* @vite-ignore */ '../frame.js', import.meta.url).toString()
+  //
+  // In `vite dev` this module is served from /src/loader/embed.ts (not a built
+  // /assets/ chunk), so "one directory up" would be /src/frame.js — the dev
+  // server exposes the entry at /frame.js (vite.config.ts's devEmbedEntries()).
+  const relative = import.meta.env.DEV ? '/frame.js' : '../frame.js'
+  return new URL(/* @vite-ignore */ relative, import.meta.url).toString()
 }
 
 // `srcdoc` (not `src: 'about:blank'` + a script injected afterwards): the

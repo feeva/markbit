@@ -35,9 +35,39 @@ function buildStamp(): Plugin {
   }
 }
 
+// The build emits the embed entries as /loader.js and /frame.js, which the dev
+// server doesn't have — public/embed-test*.html would get a 404 and the hotkey
+// would silently do nothing. Serve the entries' source at those URLs. The code
+// is returned directly (not redirected to /src/loader/*.ts) so import.meta.url
+// stays "/loader.js", which getCurrentScriptElement() matches against <script src>.
+function devEmbedEntries(): Plugin {
+  const entries: Record<string, string> = {
+    '/loader.js': '/src/loader/main.ts',
+    '/frame.js': '/src/loader/frame.ts',
+  }
+  return {
+    name: 'dev-embed-entries',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        const source = entries[req.url?.split('?')[0] ?? '']
+        if (!source) return next()
+        try {
+          const result = await server.transformRequest(source)
+          if (!result) return next()
+          res.setHeader('Content-Type', 'text/javascript')
+          res.end(result.code)
+        } catch (error) {
+          next(error)
+        }
+      })
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [vue(), tailwindcss(), buildStamp()],
+  plugins: [vue(), tailwindcss(), buildStamp(), devEmbedEntries()],
   test: {
     globals: true,
     environment: 'jsdom',
