@@ -96,10 +96,9 @@ describe('<AnnotationEditor /> - selected rectangle annotation properties', () =
 
     cy.get('.konvajs-content').click(20, 20) // empty area - clears selection
 
-    // Not the original toolSettings.rectangle default (3px) - a freshly
-    // drawn rectangle auto-selects itself (endTool()), so without this a
-    // "draw, tweak its width, draw another" flow silently reverted every
-    // subsequent rectangle back to the hardcoded default.
+    // Not the original toolSettings.rectangle default (3px) - without this a
+    // "select a shape, tweak its width, draw another" flow silently reverted
+    // every subsequent rectangle back to the hardcoded default.
     boxDropdownTrigger().click()
     boxDropdownContent().contains('Line Width: 12px').should('be.visible')
   })

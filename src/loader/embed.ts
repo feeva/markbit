@@ -22,31 +22,31 @@ let originalOverflow = { html: '', body: '' }
 
 // Defensive only (the actual fix for the style-loss race is the two-shot
 // capture in captureHostPage() below, not this): guards against open() ever
-// running while the tab is literally hidden or the window unfocused, e.g. if
-// a host triggers it programmatically rather than from a click. A tried,
-// unproven fixed delay here (waiting for visibility/focus plus a flat 250ms)
-// didn't measurably help the observed race, so it's not worth stacking more
-// latency on top of the two-shot capture's own cost.
+// running while the tab is literally hidden, e.g. if a host triggers it
+// programmatically. A tried, unproven fixed delay here (waiting for
+// visibility plus a flat 250ms) didn't measurably help the observed race, so
+// it's not worth stacking more latency on top of the two-shot capture's own
+// cost.
+//
+// Deliberately does NOT also wait for document.hasFocus(): it can read false
+// even while this document is receiving the hotkey's own keydown (e.g. right
+// after our overlay iframe, which held focus, was removed - see close()),
+// which left the hotkey stalled until the user clicked somewhere.
 function waitForVisibleAndSettled(): Promise<void> {
   return new Promise((resolve) => {
     function settle() {
       requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
     }
-    function isReady() {
-      return document.visibilityState === 'visible' && document.hasFocus()
-    }
-    if (isReady()) {
+    if (document.visibilityState === 'visible') {
       settle()
       return
     }
     function handler() {
-      if (!isReady()) return
+      if (document.visibilityState !== 'visible') return
       document.removeEventListener('visibilitychange', handler)
-      window.removeEventListener('focus', handler)
       settle()
     }
     document.addEventListener('visibilitychange', handler)
-    window.addEventListener('focus', handler)
   })
 }
 
@@ -210,6 +210,11 @@ function createFrameIframe(): Promise<HTMLIFrameElement> {
 export function close(): void {
   if (!iframe) return
 
+  // Pull focus back to the host page *before* removing the iframe: the
+  // iframe holds keyboard focus while open, and removing a focused frame can
+  // leave the page with no focused frame at all, so the next hotkey press
+  // wouldn't open the editor until the user clicked somewhere first.
+  window.focus()
   iframe.remove()
   iframe = null
 
@@ -224,6 +229,8 @@ export function close(): void {
 export function setHidden(hidden: boolean): void {
   if (!iframe) return
 
+  // Same focus handoff as close(): a display:none frame shouldn't keep focus.
+  if (hidden) window.focus()
   iframe.style.display = hidden ? 'none' : ''
   if (!hidden) iframe.contentWindow?.focus()
 }

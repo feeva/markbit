@@ -215,6 +215,7 @@ const {
   endTool,
   cancelTool,
   setAnnotationInteractivity,
+  selectLastDrawn,
   loadAnnotationDocument,
   serializeStageToAnnotationDocument,
   generatePreviewDataUrl,
@@ -344,9 +345,9 @@ const handleSelectTool = (tool: Tool) => {
 }
 
 const handleUpdateToolSettings = (tool: Tool, settings: Partial<ToolSettings>) => {
-  // Also updates the "next new shape" default: a freshly-drawn shape
-  // auto-selects itself (endTool() in useAnnotationTools.ts), so without
-  // this the very next shape would revert to the hardcoded default.
+  // Also updates the "next new shape" default, so a width/color change made
+  // on a selected shape carries over to the next one drawn instead of
+  // reverting to the hardcoded default.
   toolSettings.value[tool] = { ...toolSettings.value[tool], ...settings }
 
   // While a selection of this tool's own type is active, its dropdown also
@@ -652,6 +653,10 @@ watch(activeTool, (tool) => {
   }
 
   setAnnotationInteractivity(tool)
+  // Newly drawn shapes aren't auto-selected (see useAnnotationTools.ts's
+  // endTool()), so switching to the select tool is how you edit the one you
+  // just drew.
+  if (tool === 'select') selectLastDrawn()
   handleUpdateHoverCursor(stage.value?.getPointerPosition() || undefined)
 })
 

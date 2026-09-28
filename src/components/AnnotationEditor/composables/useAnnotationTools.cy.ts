@@ -309,6 +309,63 @@ describe('useAnnotationTools', () => {
     ctx.cleanup()
   })
 
+  it('does not auto-select a freshly drawn shape, so the next one can start on top of it', () => {
+    const ctx = createToolsContext()
+
+    ctx.tools.loadAnnotationDocument(null)
+    ctx.activeTool.value = 'rectangle'
+    ctx.tools.startTool({ x: 100, y: 100 })
+    ctx.tools.moveTool({ x: 200, y: 200 })
+    ctx.tools.endTool()
+
+    expect(ctx.transformer.nodes()).to.have.length(0)
+
+    ctx.cleanup()
+  })
+
+  it('selectLastDrawn() selects the shape just drawn, once', () => {
+    const ctx = createToolsContext()
+
+    ctx.tools.loadAnnotationDocument(null)
+    ctx.activeTool.value = 'rectangle'
+    ctx.tools.startTool({ x: 100, y: 100 })
+    ctx.tools.moveTool({ x: 200, y: 200 })
+    ctx.tools.endTool()
+
+    const rect = ctx.layer
+      .find('Rect')
+      .find((node) => node.getAttr('annotationType') === 'rectangle') as Konva.Rect
+
+    ctx.tools.selectLastDrawn()
+    expect(ctx.transformer.nodes()).to.deep.equal([rect])
+
+    ctx.transformer.nodes([])
+    ctx.tools.selectLastDrawn()
+    expect(ctx.transformer.nodes()).to.have.length(0)
+
+    ctx.cleanup()
+  })
+
+  it('selectLastDrawn() skips a shape that was deleted in the meantime', () => {
+    const ctx = createToolsContext()
+
+    ctx.tools.loadAnnotationDocument(null)
+    ctx.activeTool.value = 'rectangle'
+    ctx.tools.startTool({ x: 100, y: 100 })
+    ctx.tools.moveTool({ x: 200, y: 200 })
+    ctx.tools.endTool()
+
+    ctx.layer
+      .find('Rect')
+      .find((node) => node.getAttr('annotationType') === 'rectangle')
+      ?.destroy()
+
+    ctx.tools.selectLastDrawn()
+    expect(ctx.transformer.nodes()).to.have.length(0)
+
+    ctx.cleanup()
+  })
+
   it('clears transformer selection before generating preview', () => {
     const ctx = createToolsContext()
 

@@ -174,6 +174,10 @@ export function useAnnotationTools({
   const currentNode = ref<Konva.Rect | Konva.Line | Konva.Group | null>(null)
   const drawStart = ref<{ x: number; y: number } | null>(null)
   const isDrawing = ref(false)
+  // The most recent non-text shape drawn, so switching to the select tool
+  // right afterwards can pick it up (see selectLastDrawn()). Deliberately a
+  // plain variable, not a ref - nothing renders from it.
+  let lastDrawnNode: Konva.Node | null = null
 
   const cropWindow = useCropWindow({ overlayLayer, backgroundImage, stage })
 
@@ -457,14 +461,29 @@ export function useAnnotationTools({
       }
     }
 
-    if (currentNode.value && transformer.value) {
-      transformer.value.nodes([currentNode.value as unknown as Konva.Node])
+    // Not auto-selected: drawing tools stay active after a shape is drawn, and
+    // a selected shape's Transformer sat over exactly the spot where the next
+    // shape usually starts, blocking back-to-back drawing. Switching to the
+    // select tool picks this shape up instead (selectLastDrawn()). Text is the
+    // exception - startTool() still selects it, since it needs editing.
+    if (currentNode.value) {
+      lastDrawnNode = currentNode.value as unknown as Konva.Node
     }
 
     currentNode.value = null
     drawStart.value = null
     isDrawing.value = false
     layer.value?.batchDraw()
+  }
+
+  // One-shot: selects the shape endTool() just drew, if it still exists
+  // (getLayer() is null once a node has been destroyed/deleted).
+  const selectLastDrawn = () => {
+    const node = lastDrawnNode
+    lastDrawnNode = null
+    if (node?.getLayer() && transformer.value) {
+      transformer.value.nodes([node])
+    }
   }
 
   const cancelTool = () => {
@@ -620,6 +639,7 @@ export function useAnnotationTools({
 
     annotationLayer.find('.annotation-shape').forEach((node) => node.destroy())
     transformer.value?.nodes([])
+    lastDrawnNode = null
 
     // Restore image placement (position, scale, rotation)
     if (annotationDocument?.imagePlacement) {
@@ -907,6 +927,7 @@ export function useAnnotationTools({
     endTool,
     cancelTool,
     setAnnotationInteractivity,
+    selectLastDrawn,
     loadAnnotationDocument,
     serializeStageToAnnotationDocument,
     generatePreviewDataUrl,
