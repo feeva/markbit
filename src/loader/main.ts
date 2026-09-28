@@ -39,6 +39,10 @@ export interface MarkbitConfig {
 export interface MarkbitAPI {
   open: () => void
   close: () => void
+  // Temporarily hide/re-show an open overlay without discarding its
+  // annotations — see embed.ts's setHidden().
+  hide: () => void
+  show: () => void
   destroy: () => void
 }
 
@@ -148,6 +152,11 @@ export class MarkbitLoader {
     embed.close()
   }
 
+  public async setHidden(hidden: boolean): Promise<void> {
+    const embed = await import('./embed')
+    embed.setHidden(hidden)
+  }
+
   public destroy(): void {
     if (this.isDestroyed) return
     this.isDestroyed = true
@@ -166,6 +175,8 @@ export function init(config: MarkbitConfig = {}): MarkbitAPI {
   return {
     open: () => void loader.open(),
     close: () => void loader.close(),
+    hide: () => void loader.setHidden(true),
+    show: () => void loader.setHidden(false),
     destroy: () => loader.destroy(),
   }
 }

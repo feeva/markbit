@@ -217,6 +217,17 @@ export function close(): void {
   document.body.style.overflow = originalOverflow.body
 }
 
+// display:none (not remove()) keeps the iframe's document — and with it the
+// in-progress annotations — alive, so a host can temporarily reveal its own
+// UI (e.g. a dialog launched from a custom action) underneath the
+// max-z-index overlay and then bring the same editor back.
+export function setHidden(hidden: boolean): void {
+  if (!iframe) return
+
+  iframe.style.display = hidden ? 'none' : ''
+  if (!hidden) iframe.contentWindow?.focus()
+}
+
 export function isOpen(): boolean {
   return iframe !== null
 }
