@@ -48,11 +48,25 @@ live `markbit.abcbox.kr` CDN. For local testing against `npm run preview`, use
 `npm run build:test` instead (see `src/loader/embed.ts`'s `frameScriptUrl()`
 for why).
 
+## Contributing
+
+Pull requests are welcome. Contributors sign a one-time
+[Contributor License Agreement](CLA.md) on their first pull request — see
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## License
 
-Markbit is licensed under the [Mozilla Public License 2.0](LICENSE). MPL's
-copyleft applies only at the file level, to Markbit's own source files — you
-can embed or combine Markbit with proprietary code freely. If you modify
-Markbit's own source and want to keep those changes closed, or you'd rather
-not deal with MPL's terms at all, a commercial license is available — open an
-issue to discuss.
+Markbit is dual-licensed.
+
+- **Open source:** [Mozilla Public License 2.0](LICENSE). MPL's copyleft
+  applies only at the file level, to Markbit's own source files — you can
+  embed or combine Markbit with proprietary code freely.
+- **Commercial license:** for teams that want to keep modifications to
+  Markbit's own source closed, need terms that fit their company's open source
+  policy or procurement process, or want support or custom features.
+  Email [license@abcbox.kr](mailto:license@abcbox.kr?subject=Markbit%20commercial%20license)
+  to discuss.
+
+Bug reports and feature ideas go to
+[GitHub Issues](https://github.com/feeva/markbit/issues); for anything else,
+email [support@abcbox.kr](mailto:support@abcbox.kr).

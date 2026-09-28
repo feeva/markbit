@@ -5,6 +5,8 @@ import { locale, setLocale, t } from '@/i18n/landing'
 
 const GITHUB_URL = 'https://github.com/feeva/markbit'
 const GITHUB_REPO = 'feeva/markbit'
+const SUPPORT_EMAIL = 'support@abcbox.kr'
+const LICENSE_EMAIL = 'license@abcbox.kr'
 
 defineProps<{
   isDraggingOver: boolean
@@ -181,14 +183,34 @@ const tools = [
       </div>
 
       <footer class="mt-2 flex flex-col items-center gap-2 text-xs text-base-content/60">
-        <a
-          href="https://github.com/feeva/markbit/issues/new"
-          target="_blank"
-          rel="noopener"
-          class="underline hover:text-base-content"
-        >
-          {{ t('sendFeedback') }}
-        </a>
+        <!--
+          Email sits next to the GitHub link for visitors without a GitHub
+          account; commercial inquiries get their own address because
+          companies won't discuss licensing in a public issue.
+        -->
+        <p class="flex items-center gap-2">
+          <a
+            href="https://github.com/feeva/markbit/issues/new"
+            target="_blank"
+            rel="noopener"
+            class="underline hover:text-base-content"
+          >
+            {{ t('sendFeedback') }}
+          </a>
+          <span aria-hidden="true">·</span>
+          <a :href="`mailto:${SUPPORT_EMAIL}`" class="underline hover:text-base-content">
+            {{ SUPPORT_EMAIL }}
+          </a>
+        </p>
+        <p>
+          {{ t('commercialLicense') }}:
+          <a
+            :href="`mailto:${LICENSE_EMAIL}?subject=Markbit%20commercial%20license`"
+            class="underline hover:text-base-content"
+          >
+            {{ LICENSE_EMAIL }}
+          </a>
+        </p>
         <p>© {{ new Date().getFullYear() }} Markbit — MPL-2.0</p>
       </footer>
     </div>
